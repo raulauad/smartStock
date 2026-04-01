@@ -21,10 +21,9 @@ public sealed class ObtenerPerfilAdminQueryHandler
             ?? throw new UsuarioNoEncontradoException();
 
         return new ObtenerPerfilAdminResponse(
-            admin.Id,
             admin.Nombre,
             admin.Email!,
-            admin.Telefono,
-            admin.Dni);
+            admin.Telefono
+            );
     }
 }

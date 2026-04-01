@@ -71,7 +71,16 @@ Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreF
 - `DTOs/` → Response records
 - `Hubs/` → (reservado para SignalR futuro)
 
-**Feature existente:** `RegistrarAdministrador` — registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno).
+**Feature existente:**
+*COMMANDS:* 
+`RegistrarAdministrador` — registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno).
+`IniciarSesion` -aplica para ambos roles ya que ambos inician sesion con su email y contraseña.
+`Alta Empleado` -el administrador da de alta un usuario(empleado) dentro del sistema.
+
+*QUERIES:*
+`ObtenerPerfilAdmin` -obtiene del perfil admin tanto el usuario como el administrador mismo.
+`ObtenerListaEmpleados` -el ADMINISTRADOR obtiene el listado de los empleados dados de alta dentro del sistema.
+`ObtenerDetalleEmpleados` -el ADMINISTRADOR selecciona un usuario dentro de esa lista de empleados y puede ver TODOS LOS DATOS del mismo.
 
 ---
 
