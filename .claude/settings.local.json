@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for f in \"c:/Users/flore/Desktop/RauL-Proyects/.Net/smartStock/Application/Common/Behaviors/ValidationBehavior.cs\" \"c:/Users/flore/Desktop/RauL-Proyects/.Net/smartStock/Application/Features/Administrador/Commands/RegistrarAdministrador/RegistrarAdministradorCommand.cs\" \"c:/Users/flore/Desktop/RauL-Proyects/.Net/smartStock/Application/Features/Administrador/Commands/RegistrarAdministrador/RegistrarAdministradorCommandHandler.cs\" \"c:/Users/flore/Desktop/RauL-Proyects/.Net/smartStock/Application/Features/Administrador/Commands/RegistrarAdministrador/RegistrarAdministradorCommandValidator.cs\" \"c:/Users/flore/Desktop/RauL-Proyects\\\\.Net\\\\smartStock/Application/Features/Administrador/Commands/RegistrarAdministrador/RegistrarAdministradorResponse.cs\" \"c:/Users/flore/Desktop/RauL-Proyects/.Net/smartStock/Presentation/Controllers/AdministradorController.cs\" \"c:/Users/flore/Desktop/RauL-Proyects/.Net/smartStock/Program.cs\")",
+      "Bash(do)",
+      "Bash(echo \"=== $f ===\")",
+      "Read(//c/Users/flore/Desktop/RauL-Proyects/.Net/smartStock/**)",
+      "Bash(done)",
+      "Bash(dotnet add package Scalar.AspNetCore)",
+      "Bash(dotnet build)",
+      "Bash(dotnet tool update --global dotnet-ef --version 10.0.3)",
+      "Bash(dotnet ef migrations add InitialCreate --output-dir Infrastructure/Persistence/Migrations)",
+      "Bash(dotnet ef database update)",
+      "Bash(reg query \"HKLM\\\\SOFTWARE\\\\Microsoft\\\\Microsoft SQL Server\\\\Instance Names\\\\SQL\")",
+      "Bash(xargs grep -l \"CierreCaja\")",
+      "Bash(dotnet ef:*)"
+    ]
+  }
+}
