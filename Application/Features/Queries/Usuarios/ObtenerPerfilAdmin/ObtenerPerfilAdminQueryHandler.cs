@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using smartStock.Application.Common.Exceptions.Auth;
 using smartStock.Application.Common.Exceptions.Usuarios;
 using smartStock.Domain.Models;
 
@@ -8,6 +9,8 @@ namespace smartStock.Application.Features.Queries.Usuarios.ObtenerPerfilAdmin;
 public sealed class ObtenerPerfilAdminQueryHandler
     : IRequestHandler<ObtenerPerfilAdminQuery, ObtenerPerfilAdminResponse>
 {
+    private const string RolAdministrador = "Administrador";
+
     private readonly UserManager<Usuario> _userManager;
 
     public ObtenerPerfilAdminQueryHandler(UserManager<Usuario> userManager)
@@ -20,10 +23,15 @@ public sealed class ObtenerPerfilAdminQueryHandler
         var admin = await _userManager.FindByIdAsync(query.AdminId.ToString())
             ?? throw new UsuarioNoEncontradoException();
 
+        if (!await _userManager.IsInRoleAsync(admin, RolAdministrador))
+            throw new AccesoNoPermitidoException();
+
         return new ObtenerPerfilAdminResponse(
+            admin.Id,
             admin.Nombre,
             admin.Email!,
-            admin.Telefono
-            );
+            admin.Telefono,
+            admin.Dni
+        );
     }
 }

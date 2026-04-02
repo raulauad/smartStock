@@ -36,9 +36,19 @@ smartStock/
 │   └── Common/
 │       ├── Behaviors/   → ValidationBehavior (pipeline MediatR)
 │       ├── Exceptions/  → Excepciones de dominio que implementan IExceptionHandler
+│       │   ├── Admin/   → AdminYaExisteException
+│       │   ├── Auth/    → AccesoNoPermitidoException, CuentaInactivaException, CredencialesInvalidasException
+│       │   └── Usuarios/→ DniDuplicadoException, EmailDuplicadoException, UsuarioNoEncontradoException
+│       ├── Interfaces/  → IJwtTokenService, IExceptionHandler
 │       └── Middleware/  → GlobalExceptionHandler
-├── Infrastructure/      → AppDbContext, EF Configurations, Migrations
-└── Presentation/        → Controllers (organizados por entidad/rol)
+├── Infrastructure/
+│   ├── Persistence/     → AppDbContext, EF Configurations, Migrations
+│   └── Services/        → JwtTokenService (implementa IJwtTokenService)
+└── Presentation/
+    └── Controllers/
+        ├── Auth/        → AuthController (api/auth)
+        └── Usuarios/
+            └── Admin/   → AdministradorController (api/administrador)
 ```
 
 ---
@@ -48,7 +58,8 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 
 | Entidad | Descripción |
 |---|---|
-| `Usuario` | Extiende `IdentityUser<Guid>`. Campos extra: Nombre, Dni, Telefono, Direccion, FechaAlta, EstaActivo |
+| `Usuario` | Extiende `IdentityUser<Guid>`. Campos extra: Nombre, Dni, Telefono, Direccion (owned), FechaAlta, EstaActivo |
+| `Direccion` | Owned Entity de Usuario. Campos: Calle, Numero, Piso (nullable), Departamento (nullable), Ciudad, Provincia, CodigoPostal |
 | `Producto` | Tiene PrecioCosto, PrecioVenta, CategoriaId, UsuarioAltaId. Relacionado 1:1 con StockActual |
 | `StockActual` | PK = ProductoId (1:1 con Producto). Cantidad decimal |
 | `MovimientoStock` | Tipo enum (Compra/Venta/Ajuste). FK a Producto, Usuario, y opcionales a ItemVenta/ItemCompra |
@@ -71,16 +82,16 @@ Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreF
 - `DTOs/` → Response records
 - `Hubs/` → (reservado para SignalR futuro)
 
-**Feature existente:**
-*COMMANDS:* 
-`RegistrarAdministrador` — registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno).
-`IniciarSesion` -aplica para ambos roles ya que ambos inician sesion con su email y contraseña.
-`Alta Empleado` -el administrador da de alta un usuario(empleado) dentro del sistema.
+**Features implementadas:**
+*COMMANDS:*
+`RegistrarAdministrador` — CU01-W1: registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno). Endpoint: `POST api/administrador/registro`.
+`IniciarSesion` — CU01-W2: inicio de sesión para Administrador y Empleado con email y contraseña. Retorna JWT. Lanza `CredencialesInvalidasException` (401) o `CuentaInactivaException` (403). Endpoint: `POST api/auth/login`.
+`AltaEmpleado` — CU01-W3: el administrador da de alta un usuario (empleado) dentro del sistema. Requiere `[Authorize(Roles = "Administrador")]`. Endpoint: `POST api/administrador/empleado`.
 
 *QUERIES:*
-`ObtenerPerfilAdmin` -obtiene del perfil admin tanto el usuario como el administrador mismo.
-`ObtenerListaEmpleados` -el ADMINISTRADOR obtiene el listado de los empleados dados de alta dentro del sistema.
-`ObtenerDetalleEmpleados` -el ADMINISTRADOR selecciona un usuario dentro de esa lista de empleados y puede ver TODOS LOS DATOS del mismo.
+`ObtenerPerfilAdmin` — CU01-R1: obtiene el perfil del administrador autenticado (datos de Usuario). Requiere `[Authorize(Roles = "Administrador")]`. Extrae el `adminId` desde el claim `"sub"`. Endpoint: `GET api/administrador/perfil`.
+`ObtenerListaEmpleados` — CU01-R2: el ADMINISTRADOR obtiene el listado de empleados con estado activo/inactivo. Endpoint: `GET api/administrador/empleados`.
+`ObtenerDetalleEmpleado` — CU01-R2: el ADMINISTRADOR consulta todos los datos de un empleado por su `Id`. Endpoint: `GET api/administrador/empleados/{id:guid}`.
 
 ---
 
@@ -149,19 +160,43 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 | Excepción | HTTP | Cuándo |
 |---|---|---|
 | `ValidationException` (FluentValidation) | 400 | Fallos de validación de campos |
-| Excepciones que implementan `IExceptionHandler` | Según `CodigoHttp` | Errores de dominio (ej: 409 AdminYaExiste) |
+| Excepciones que implementan `IExceptionHandler` | Según `CodigoHttp` | Errores de dominio |
 | `IdentityException` | 422 | Fallos de Identity al crear usuario |
 | Cualquier otra | 500 | Error inesperado |
+
+**Excepciones de dominio implementadas:**
+
+| Excepción | HTTP | Cuándo |
+|---|---|---|
+| `AdminYaExisteException` | 409 | Se intenta registrar un segundo administrador |
+| `CredencialesInvalidasException` | 401 | Email o contraseña incorrectos en login |
+| `CuentaInactivaException` | 403 | El usuario existe pero `EstaActivo = false` |
+| `AccesoNoPermitidoException` | 403 | El usuario no tiene permisos para la acción |
+| `DniDuplicadoException` | 409 | Ya existe un usuario con ese DNI |
+| `EmailDuplicadoException` | 409 | Ya existe un usuario con ese email |
+| `UsuarioNoEncontradoException` | 404 | No se encontró el usuario solicitado |
 
 ---
 
 ## Estado actual del proyecto
-- ✅ Dominio completo (todos los modelos definidos)
-- ✅ EF configurado (Categoria, Usuario configurados; migración inicial creada)
-- ✅ CU01-W1: Registro de administrador (operación única)
-- ⏳ Pendiente: autenticación JWT (login), CRUD de Productos, Categorías, Proveedores, Sesiones de venta/compra, MovimientoStock, CierreCaja
-- ⏳ Pendiente: roles adicionales (Empleado, etc.)
-- ⏳ Pendiente: DbSets faltantes en AppDbContext (solo está Categorias; faltan Productos, Proveedores, etc.)
+
+### Implementado ✅
+- Dominio completo (todos los modelos definidos; `Direccion` como Owned Entity)
+- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`; 2 migraciones (`InitialCreate`, `DireccionComoOwned`)
+- `IJwtTokenService` (interface) + `JwtTokenService` (implementación en Infrastructure/Services)
+- **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registro`
+- **CU01-W2:** `IniciarSesion` → `POST api/auth/login` (retorna JWT con claims: sub, email, nombre, roles)
+- **CU01-W3:** `AltaEmpleado` → `POST api/administrador/empleado`
+- **CU01-R1:** `ObtenerPerfilAdmin` → `GET api/administrador/perfil`
+- **CU01-R2:** `ObtenerListaEmpleados` → `GET api/administrador/empleados`
+- **CU01-R2:** `ObtenerDetalleEmpleado` → `GET api/administrador/empleados/{id:guid}`
+- Roles creados: `"Administrador"`, `"Empleado"`
+
+### Pendiente ⏳
+- CRUD de Productos, Categorías, Proveedores
+- Sesiones de venta/compra, TransaccionVenta/Compra, MovimientoStock, CierreCaja
+- DbSets faltantes en `AppDbContext` (actualmente solo `Categorias`)
+- Configuraciones EF faltantes para Producto, Proveedor, Sesiones, etc.
 
 ---
 

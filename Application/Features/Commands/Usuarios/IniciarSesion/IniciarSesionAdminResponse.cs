@@ -1,9 +1,10 @@
 namespace smartStock.Application.Features.Commands.Usuarios.DTOs;
 
-public sealed record IniciarSesionAdminResponse(
+public sealed record IniciarSesionResponse(
     Guid     Id,
     string   Nombre,
     string   Email,
+    string   Rol,
     string   Token,
     DateTime Expiracion
 );

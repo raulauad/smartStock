@@ -2,9 +2,9 @@ using FluentValidation;
 
 namespace smartStock.Application.Features.Commands.Usuarios.IniciarSesion;
 
-public sealed class IniciarSesionAdminCommandValidator : AbstractValidator<IniciarSesionAdminCommand>
+public sealed class IniciarSesionCommandValidator : AbstractValidator<IniciarSesionCommand>
 {
-    public IniciarSesionAdminCommandValidator()
+    public IniciarSesionCommandValidator()
     {
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("El email es requerido.");

@@ -3,7 +3,6 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using smartStock.Application.Features.Commands.Usuarios.AltaEmpleado;
-using smartStock.Application.Features.Commands.Usuarios.IniciarSesion;
 using smartStock.Application.Features.Commands.Usuarios.RegistrarAdmin;
 using smartStock.Application.Features.Queries.Usuarios.ObtenerDetalleEmpleado;
 using smartStock.Application.Features.Queries.Usuarios.ObtenerListaEmpleados;
@@ -36,27 +35,13 @@ public class AdministradorController : ControllerBase
     }
 
     /// <summary>
-    /// CU01-W2: Inicio de sesión del administrador.
-    /// </summary>
-    [HttpPost("login")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> IniciarSesion(
-        [FromBody] IniciarSesionAdminCommand command,
-        CancellationToken cancellationToken)
-    {
-        var respuesta = await _mediator.Send(command, cancellationToken);
-        return Ok(respuesta);
-    }
-
-    /// <summary>
     /// CU01-R1: Consulta del perfil del administrador autenticado.
     /// </summary>
     [HttpGet("perfil")]
     [Authorize(Roles = "Administrador")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ObtenerPerfil(CancellationToken cancellationToken)
     {
         var adminId  = Guid.Parse(User.FindFirstValue("sub")

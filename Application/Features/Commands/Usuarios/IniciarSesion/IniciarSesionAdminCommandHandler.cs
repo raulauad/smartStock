@@ -7,15 +7,13 @@ using smartStock.Domain.Models;
 
 namespace smartStock.Application.Features.Commands.Usuarios.IniciarSesion;
 
-public sealed class IniciarSesionAdminCommandHandler
-    : IRequestHandler<IniciarSesionAdminCommand, IniciarSesionAdminResponse>
+public sealed class IniciarSesionCommandHandler
+    : IRequestHandler<IniciarSesionCommand, IniciarSesionResponse>
 {
-    private const string RolAdministrador = "Administrador";
-
     private readonly UserManager<Usuario> _userManager;
     private readonly IJwtTokenService     _jwtTokenService;
 
-    public IniciarSesionAdminCommandHandler(
+    public IniciarSesionCommandHandler(
         UserManager<Usuario> userManager,
         IJwtTokenService     jwtTokenService)
     {
@@ -23,9 +21,9 @@ public sealed class IniciarSesionAdminCommandHandler
         _jwtTokenService = jwtTokenService;
     }
 
-    public async Task<IniciarSesionAdminResponse> Handle(
-        IniciarSesionAdminCommand command,
-        CancellationToken         cancellationToken)
+    public async Task<IniciarSesionResponse> Handle(
+        IniciarSesionCommand command,
+        CancellationToken    cancellationToken)
     {
         var usuario = await _userManager.FindByEmailAsync(command.Email);
 
@@ -33,13 +31,13 @@ public sealed class IniciarSesionAdminCommandHandler
         if (usuario is null || !await _userManager.CheckPasswordAsync(usuario, command.Contrasena))
             throw new CredencialesInvalidasException();
 
-        // FA1: el usuario existe pero no es administrador
-        if (!await _userManager.IsInRoleAsync(usuario, RolAdministrador))
-            throw new CredencialesInvalidasException();
+        // FA2: cuenta desactivada por el administrador
+        if (!usuario.EstaActivo)
+            throw new CuentaInactivaException();
 
-        var roles                    = await _userManager.GetRolesAsync(usuario);
-        var (token, expiracion)      = _jwtTokenService.GenerarToken(usuario, roles);
+        var roles               = await _userManager.GetRolesAsync(usuario);
+        var (token, expiracion) = _jwtTokenService.GenerarToken(usuario, roles);
 
-        return new IniciarSesionAdminResponse(usuario.Id, usuario.Nombre, usuario.Email!, token, expiracion);
+        return new IniciarSesionResponse(usuario.Id, usuario.Nombre, usuario.Email!, roles[0], token, expiracion);
     }
 }
