@@ -48,7 +48,8 @@ smartStock/
     └── Controllers/
         ├── Auth/        → AuthController (api/auth)
         └── Usuarios/
-            └── Admin/   → AdministradorController (api/administrador)
+            ├── Admin/    → AdministradorController (api/administrador)
+            └── Empleado/ → EmpleadoController (api/empleado)
 ```
 
 ---
@@ -71,7 +72,7 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 | `Categoria` | Nombre único (max 50), Descripcion (max 300) |
 | `Proveedor` | Cuit único (max 11), Nombre, Telefono, Direccion |
 
-**Enums:** `TipoMovimiento` (Compra, Venta, Ajuste) y `EstadoCierre` (Abierto, Cerrado).
+**Enums:** `TipoMovimiento` (Compra, Venta, Ajuste), `EstadoCierre` (Abierto, Cerrado) y `EstadoUsuario` (Suspendido, Activo, Conectado — `Conectado` reservado para SignalR).
 
 ---
 
@@ -87,6 +88,9 @@ Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreF
 `RegistrarAdministrador` — CU01-W1: registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno). Endpoint: `POST api/administrador/registro`.
 `IniciarSesion` — CU01-W2: inicio de sesión para Administrador y Empleado con email y contraseña. Retorna JWT. Lanza `CredencialesInvalidasException` (401) o `CuentaInactivaException` (403). Endpoint: `POST api/auth/login`.
 `AltaEmpleado` — CU01-W3: el administrador da de alta un usuario (empleado) dentro del sistema. Requiere `[Authorize(Roles = "Administrador")]`. Endpoint: `POST api/administrador/empleado`.
+`EditarPerfilEmpleado` — CU01-W4 (empleado): el empleado autenticado edita sus propios datos (Nombre, Email, Teléfono, DNI, Dirección). `UsuarioId` extraído del claim `sub` en el controller — nunca del body. Mismas validaciones que CU01-W3 (sin contraseña). Lanza `DniDuplicadoException` o `EmailDuplicadoException` si el dato ya lo usa otro usuario. Endpoint: `PUT api/empleado/perfil`.
+`CambiarEstadoEmpleado` — CU01-W4/W5 (admin): el administrador activa o suspende un empleado (`EstaActivo`). `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Lanza `EstadoUsuarioSinCambioException` (409) si el estado ya es el solicitado. Endpoint único: `PATCH api/administrador/empleados/{id:guid}/estado`.
+`EliminarEmpleado` — CU01-W6: el administrador elimina permanentemente la cuenta de un empleado. `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Sin body ni response (204 No Content) → el Command implementa `IRequest` sin tipo genérico y no tiene Validator. Endpoint: `DELETE api/administrador/empleados/{id:guid}`.
 
 *QUERIES:*
 `ObtenerPerfilAdmin` — CU01-R1: obtiene el perfil del administrador autenticado (datos de Usuario). Requiere `[Authorize(Roles = "Administrador")]`. Extrae el `adminId` desde el claim `"sub"`. Endpoint: `GET api/administrador/perfil`.
@@ -106,14 +110,15 @@ Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreF
 - **Idioma del código:** castellano para nombres de dominio y variables (Nombre, Precio, CierreCaja...), inglés para infraestructura técnica
 
 ### Patrones obligatorios
-- Los **Commands** son `sealed record` que implementan `IRequest<TResponse>`
-- Los **Handlers** son `sealed class` que implementan `IRequestHandler<TCommand, TResponse>`
+- Los **Commands** son `sealed record` que implementan `IRequest<TResponse>`, o `IRequest` (sin tipo) si el endpoint retorna 204 No Content
+- Los **Handlers** son `sealed class` que implementan `IRequestHandler<TCommand, TResponse>`, o `IRequestHandler<TCommand>` si no hay respuesta
 - Los **Validators** son `sealed class : AbstractValidator<TCommand>`
 - Los **Responses** son `sealed record`
 - Las **excepciones de dominio** implementan `IExceptionHandler` (expone `CodigoHttp` y `Titulo`)
 - Los **campos calculados** en el dominio llevan comentario `// calculado en app:`
 - Los **snapshots de precio** en items llevan comentario `// snapshot`
 - Las **configuraciones de EF** van en `Infrastructure/Persistence/Configurations/` como `IEntityTypeConfiguration<T>`, una clase por entidad
+- Los **IDs sensibles** (userId, empleadoId) que provienen de JWT o de la ruta se declaran como `{ get; init; }` fuera del constructor del record y son sobreescritos en el controller con `command with { ... }` — nunca se leen del body
 
 ### Validaciones
 - Siempre usar **FluentValidation** en el Validator del Command (nunca data annotations en los Commands)
@@ -175,6 +180,7 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 | `DniDuplicadoException` | 409 | Ya existe un usuario con ese DNI |
 | `EmailDuplicadoException` | 409 | Ya existe un usuario con ese email |
 | `UsuarioNoEncontradoException` | 404 | No se encontró el usuario solicitado |
+| `EstadoUsuarioSinCambioException` | 409 | Se intenta desactivar a un usuario ya suspendido, o reactivar a uno ya activo |
 
 ---
 
@@ -187,6 +193,10 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registro`
 - **CU01-W2:** `IniciarSesion` → `POST api/auth/login` (retorna JWT con claims: sub, email, nombre, roles)
 - **CU01-W3:** `AltaEmpleado` → `POST api/administrador/empleado`
+- **CU01-W4 (empleado):** `EditarPerfilEmpleado` → `PUT api/empleado/perfil`
+- **CU01-W4 (admin):** `CambiarEstadoEmpleado` → `PATCH api/administrador/empleados/{id:guid}/estado`
+- **CU01-W5:** unificado con CU01-W4 → mismo endpoint `PATCH api/administrador/empleados/{id:guid}/estado`
+- **CU01-W6:** `EliminarEmpleado` → `DELETE api/administrador/empleados/{id:guid}` (204 No Content)
 - **CU01-R1:** `ObtenerPerfilAdmin` → `GET api/administrador/perfil`
 - **CU01-R2:** `ObtenerListaEmpleados` → `GET api/administrador/empleados`
 - **CU01-R2:** `ObtenerDetalleEmpleado` → `GET api/administrador/empleados/{id:guid}`
