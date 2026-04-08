@@ -26,11 +26,56 @@ Permite al admin, gestion de empleados, movimientos realizados por los empleados
 
 ---
 
-## Arquitectura
-El proyecto sigue una arquitectura **en capas dentro de un único proyecto**:
+## Estructura de la Solución
+
+La solución está organizada para soportar múltiples proyectos futuros:
 
 ```
-smartStock/
+smartStock/                              ← raíz del repositorio
+├── smartStock.sln                       ← solución en la raíz
+└── src/
+    ├── smartStock.Api/                  ← proyecto principal (actual)
+    │   ├── smartStock.Api.csproj
+    │   ├── Program.cs
+    │   ├── appsettings.json
+    │   ├── appsettings.Development.json
+    │   ├── Properties/
+    │   ├── Domain/
+    │   ├── Application/
+    │   ├── Infrastructure/
+    │   └── Presentation/
+    │
+    ├── smartStock.Shared/               ← (FUTURO)
+    │   ├── smartStock.Shared.csproj
+    │   ├── DTOs/                        ← DTOs y requests/responses compartidos
+    │   └── Contracts/                   ← interfaces y contratos públicos
+    │
+    ├── smartStock.UI/                   ← (FUTURO)
+    │   ├── smartStock.UI.csproj         ← Razor Class Library
+    │   ├── Components/                  ← componentes .razor reutilizables
+    │   ├── Services/                    ← servicios HTTP que consumen la API
+    │   └── wwwroot/                     ← CSS y assets compartidos
+    │
+    └── smartStock.Web/                  ← (FUTURO)
+        ├── smartStock.Web.csproj        ← Blazor WebAssembly
+        ├── Pages/                       ← páginas y rutas navegables
+        ├── Layout/                      ← shell, navbar, sidebar
+        └── wwwroot/                     ← index.html, favicon
+```
+
+**Dependencias futuras entre proyectos (referencia):**
+- `smartStock.Api`  → referenciará `smartStock.Shared`
+- `smartStock.UI`   → referenciará `smartStock.Shared`
+- `smartStock.Web`  → referenciará `smartStock.UI` y `smartStock.Shared`
+
+---
+
+## Arquitectura de smartStock.Api
+
+El proyecto sigue una arquitectura **en capas**. Root namespace: `smartStock.Api`.
+
+```
+src/smartStock.Api/
 ├── Domain/              → Modelos de negocio, enums, interfaces (sin dependencias externas)
 ├── Application/         → CQRS (Commands/Queries/Handlers), Validators, DTOs, Middleware
 │   └── Common/
@@ -77,7 +122,7 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 ---
 
 ## Estructura de Features (CQRS)
-Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreFeature}/"Dentro iria el command, el handler, commandvalidator y dto"/` y contiene:
+Cada feature vive en `src/smartStock.Api/Application/Features/Commands o Queries/{Entidad}/{NombreFeature}/` y contiene:
 - `Commands/` → `{Nombre}Command.cs` (record), `{Nombre}CommandHandler.cs`, `{Nombre}CommandValidator.cs`, `{Nombre}Dto.cs` 
 - `Queries/` → Similar para queries
 - `DTOs/` → Response records
@@ -85,17 +130,18 @@ Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreF
 
 **Features implementadas:**
 *COMMANDS:*
-`RegistrarAdministrador` — CU01-W1: registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno). Endpoint: `POST api/administrador/registro`.
-`IniciarSesion` — CU01-W2: inicio de sesión para Administrador y Empleado con email y contraseña. Retorna JWT. Lanza `CredencialesInvalidasException` (401) o `CuentaInactivaException` (403). Endpoint: `POST api/auth/login`.
-`AltaEmpleado` — CU01-W3: el administrador da de alta un usuario (empleado) dentro del sistema. Requiere `[Authorize(Roles = "Administrador")]`. Endpoint: `POST api/administrador/empleado`.
-`EditarPerfilEmpleado` — CU01-W4 (empleado): el empleado autenticado edita sus propios datos (Nombre, Email, Teléfono, DNI, Dirección). `UsuarioId` extraído del claim `sub` en el controller — nunca del body. Mismas validaciones que CU01-W3 (sin contraseña). Lanza `DniDuplicadoException` o `EmailDuplicadoException` si el dato ya lo usa otro usuario. Endpoint: `PUT api/empleado/perfil`.
-`CambiarEstadoEmpleado` — CU01-W4/W5 (admin): el administrador activa o suspende un empleado (`EstaActivo`). `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Lanza `EstadoUsuarioSinCambioException` (409) si el estado ya es el solicitado. Endpoint único: `PATCH api/administrador/empleados/{id:guid}/estado`.
-`EliminarEmpleado` — CU01-W6: el administrador elimina permanentemente la cuenta de un empleado. `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Sin body ni response (204 No Content) → el Command implementa `IRequest` sin tipo genérico y no tiene Validator. Endpoint: `DELETE api/administrador/empleados/{id:guid}`.
+`RegistrarAdministrador` — CU01-W1: registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno). Endpoint: `POST api/administrador/registrar-administrador`.
+`IniciarSesion` — CU01-W2: inicio de sesión para Administrador y Empleado con email y contraseña. Retorna JWT. Lanza `CredencialesInvalidasException` (401) o `CuentaInactivaException` (403). Endpoint: `POST api/auth/iniciar-sesion`.
+`AltaEmpleado` — CU01-W3: el administrador da de alta un usuario (empleado) dentro del sistema. Requiere `[Authorize(Roles = "Administrador")]`. Endpoint: `POST api/administrador/alta-empleado`.
+`EditarPerfilEmpleado` — CU01-W4 (empleado): el empleado autenticado edita sus propios datos (Nombre, Email, Teléfono, DNI, Dirección). `UsuarioId` extraído del claim `sub` en el controller — nunca del body. Mismas validaciones que CU01-W3 (sin contraseña). Lanza `DniDuplicadoException` o `EmailDuplicadoException` si el dato ya lo usa otro usuario. Endpoint: `PUT api/empleado/editar-perfil-empleado`.
+`CambiarEstadoEmpleado` — CU01-W4/W5 (admin): el administrador activa o suspende un empleado (`EstaActivo`). `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Lanza `EstadoUsuarioSinCambioException` (409) si el estado ya es el solicitado. Endpoint único: `PATCH api/administrador/cambiar-estado-empleado/{id:guid}`.
+`EliminarEmpleado` — CU01-W6: el administrador elimina permanentemente la cuenta de un empleado. `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Sin body ni response (204 No Content) → el Command implementa `IRequest` sin tipo genérico y no tiene Validator. Endpoint: `DELETE api/administrador/eliminar-empleado/{id:guid}`.
+`CambiarContrasena` — CU01-W7: el empleado autenticado cambia su propia contraseña. Requiere `[Authorize(Roles = "Empleado")]`. `UsuarioId` extraído del claim `sub` en el controller — nunca del body. Valida que la contraseña actual sea correcta (lanza `CredencialesInvalidasException` 401 si no lo es) y que la nueva cumpla las reglas de Identity (mín. 8 caracteres, mayúscula, dígito, carácter especial). FA3: confirmación debe coincidir con la nueva (validado en FluentValidation con `.Equal(...)`). Endpoint: `PATCH api/empleado/cambiar-contrasena`.
 
 *QUERIES:*
-`ObtenerPerfilAdmin` — CU01-R1: obtiene el perfil del administrador autenticado (datos de Usuario). Requiere `[Authorize(Roles = "Administrador")]`. Extrae el `adminId` desde el claim `"sub"`. Endpoint: `GET api/administrador/perfil`.
-`ObtenerListaEmpleados` — CU01-R2: el ADMINISTRADOR obtiene el listado de empleados con estado activo/inactivo. Endpoint: `GET api/administrador/empleados`.
-`ObtenerDetalleEmpleado` — CU01-R2: el ADMINISTRADOR consulta todos los datos de un empleado por su `Id`. Endpoint: `GET api/administrador/empleados/{id:guid}`.
+`ObtenerPerfilAdmin` — CU01-R1: obtiene el perfil del administrador autenticado (datos de Usuario). Requiere `[Authorize(Roles = "Administrador")]`. Extrae el `adminId` desde el claim `"sub"`. Endpoint: `GET api/administrador/obtener-perfil-admin`.
+`ObtenerListaEmpleados` — CU01-R2: el ADMINISTRADOR obtiene el listado de empleados con estado activo/inactivo. Endpoint: `GET api/administrador/obtener-lista-empleados`.
+`ObtenerDetalleEmpleado` — CU01-R2: el ADMINISTRADOR consulta todos los datos de un empleado por su `Id`. Endpoint: `GET api/administrador/obtener-detalle-empleado/{id:guid}`.
 
 ---
 
@@ -106,8 +152,9 @@ Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreF
 - **Campos privados:** `_camelCase`
 - **Propiedades:** PascalCase
 - **Métodos:** PascalCase
-- **Variables locales:** camelCase
-- **Idioma del código:** castellano para nombres de dominio y variables (Nombre, Precio, CierreCaja...), inglés para infraestructura técnica
+- **Variables locales:** camelCase.
+- **Idioma del código:** castellano para nombres de dominio y variables (Nombre, Precio, CierreCaja...), inglés para infraestructura técnica.
+- **Endpoints (rutas URL):** el segmento de ruta es el nombre exacto del feature en kebab-case. Ej: `AltaEmpleado` → `alta-empleado`, `CambiarEstadoEmpleado` → `cambiar-estado-empleado/{id:guid}`, `ObtenerListaEmpleados` → `obtener-lista-empleados`.
 
 ### Patrones obligatorios
 - Los **Commands** son `sealed record` que implementan `IRequest<TResponse>`, o `IRequest` (sin tipo) si el endpoint retorna 204 No Content
@@ -117,7 +164,7 @@ Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreF
 - Las **excepciones de dominio** implementan `IExceptionHandler` (expone `CodigoHttp` y `Titulo`)
 - Los **campos calculados** en el dominio llevan comentario `// calculado en app:`
 - Los **snapshots de precio** en items llevan comentario `// snapshot`
-- Las **configuraciones de EF** van en `Infrastructure/Persistence/Configurations/` como `IEntityTypeConfiguration<T>`, una clase por entidad
+- Las **configuraciones de EF** van en `src/smartStock.Api/Infrastructure/Persistence/Configurations/` como `IEntityTypeConfiguration<T>`, una clase por entidad
 - Los **IDs sensibles** (userId, empleadoId) que provienen de JWT o de la ruta se declaran como `{ get; init; }` fuera del constructor del record y son sobreescritos en el controller con `command with { ... }` — nunca se leen del body
 
 ### Validaciones
@@ -135,18 +182,18 @@ Cada feature vive en `Application/Features/Commands o Queries/{Entidad}/{NombreF
 
 ## Comandos útiles
 ```bash
-# Compilar
+# Compilar (desde la raíz del repositorio)
 dotnet build
 
-# Migrations
-dotnet ef migrations add {NombreMigracion} --output-dir Infrastructure/Persistence/Migrations
-dotnet ef database update
+# Migrations (desde la raíz del repositorio)
+dotnet ef migrations add {NombreMigracion} --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
+dotnet ef database update --project src/smartStock.Api
 
 # Actualizar herramienta EF
 dotnet tool update --global dotnet-ef --version 10.0.3
 
-# Ejecutar
-dotnet run
+# Ejecutar (desde la raíz)
+dotnet run --project src/smartStock.Api
 ```
 
 ---
@@ -190,16 +237,17 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - Dominio completo (todos los modelos definidos; `Direccion` como Owned Entity)
 - EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`; 2 migraciones (`InitialCreate`, `DireccionComoOwned`)
 - `IJwtTokenService` (interface) + `JwtTokenService` (implementación en Infrastructure/Services)
-- **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registro`
-- **CU01-W2:** `IniciarSesion` → `POST api/auth/login` (retorna JWT con claims: sub, email, nombre, roles)
-- **CU01-W3:** `AltaEmpleado` → `POST api/administrador/empleado`
-- **CU01-W4 (empleado):** `EditarPerfilEmpleado` → `PUT api/empleado/perfil`
-- **CU01-W4 (admin):** `CambiarEstadoEmpleado` → `PATCH api/administrador/empleados/{id:guid}/estado`
-- **CU01-W5:** unificado con CU01-W4 → mismo endpoint `PATCH api/administrador/empleados/{id:guid}/estado`
-- **CU01-W6:** `EliminarEmpleado` → `DELETE api/administrador/empleados/{id:guid}` (204 No Content)
-- **CU01-R1:** `ObtenerPerfilAdmin` → `GET api/administrador/perfil`
-- **CU01-R2:** `ObtenerListaEmpleados` → `GET api/administrador/empleados`
-- **CU01-R2:** `ObtenerDetalleEmpleado` → `GET api/administrador/empleados/{id:guid}`
+- **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registrar-administrador`
+- **CU01-W2:** `IniciarSesion` → `POST api/auth/iniciar-sesion` (retorna JWT con claims: sub, email, nombre, roles)
+- **CU01-W3:** `AltaEmpleado` → `POST api/administrador/alta-empleado`
+- **CU01-W4 (empleado):** `EditarPerfilEmpleado` → `PUT api/empleado/editar-perfil-empleado`
+- **CU01-W4 (admin):** `CambiarEstadoEmpleado` → `PATCH api/administrador/cambiar-estado-empleado/{id:guid}`
+- **CU01-W5:** unificado con CU01-W4 → mismo endpoint `PATCH api/administrador/cambiar-estado-empleado/{id:guid}`
+- **CU01-W6:** `EliminarEmpleado` → `DELETE api/administrador/eliminar-empleado/{id:guid}` (204 No Content)
+- **CU01-W7:** `CambiarContrasena` → `PATCH api/empleado/cambiar-contrasena`
+- **CU01-R1:** `ObtenerPerfilAdmin` → `GET api/administrador/obtener-perfil-admin`
+- **CU01-R2:** `ObtenerListaEmpleados` → `GET api/administrador/obtener-lista-empleados`
+- **CU01-R2:** `ObtenerDetalleEmpleado` → `GET api/administrador/obtener-detalle-empleado/{id:guid}`
 - Roles creados: `"Administrador"`, `"Empleado"`
 
 ### Pendiente ⏳

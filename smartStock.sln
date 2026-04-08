@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "smartStock", "smartStock.csproj", "{F9F495E7-3A5E-0EE0-8E49-6108D92F4834}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "smartStock.Api", "src\smartStock.Api\smartStock.Api.csproj", "{F9F495E7-3A5E-0EE0-8E49-6108D92F4834}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
