@@ -1,22 +1,19 @@
-using smartStock.Api.Domain.Models;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using smartStock.Api.Domain.Models;
 
 namespace smartStock.Api.Infrastructure.Persistence;
 
-public class AppDbContext : IdentityDbContext<Usuario, IdentityRole<Guid>, Guid>
+public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<Categoria> Categorias { get; set; }
+    public DbSet<Usuario>    Usuarios     { get; set; }
+    public DbSet<UsuarioRol> UsuarioRoles { get; set; }
+    public DbSet<Categoria>  Categorias   { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        // Tablas de Identity (obligatorio llamarlo primero)
         base.OnModelCreating(builder);
-
-        // Aplica todas las IEntityTypeConfiguration del assembly
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }

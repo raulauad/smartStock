@@ -45,10 +45,23 @@ smartStock/                              ← raíz del repositorio
     │   ├── Infrastructure/
     │   └── Presentation/
     │
-    ├── smartStock.Shared/               ← (FUTURO)
+    ├── smartStock.Shared/               ← proyecto de DTOs compartidos (activo)
     │   ├── smartStock.Shared.csproj
-    │   ├── DTOs/                        ← DTOs y requests/responses compartidos
-    │   └── Contracts/                   ← interfaces y contratos públicos
+    │   ├── Dtos/
+    │   │   ├── Admin/                   ← DTOs de features del actor Admin
+    │   │   │   ├── AltaEmpleado/
+    │   │   │   ├── CambiarEstadoEmpleado/
+    │   │   │   ├── RegistrarAdmin/
+    │   │   │   ├── ObtenerDetalleEmpleado/
+    │   │   │   ├── ObtenerListaEmpleados/
+    │   │   │   └── ObtenerPerfilAdmin/
+    │   │   ├── Auth/                    ← DTOs de features de Auth
+    │   │   │   └── IniciarSesion/
+    │   │   ├── Empleados/               ← DTOs de features del actor Empleado
+    │   │   │   ├── CambiarContrasena/
+    │   │   │   └── EditarPerfilEmpleado/
+    │   │   └── Shared/                  ← DTOs transversales (DireccionDto)
+    │   └── Contracts/                   ← (FUTURO) interfaces y contratos públicos
     │
     ├── smartStock.UI/                   ← (FUTURO)
     │   ├── smartStock.UI.csproj         ← Razor Class Library
@@ -63,10 +76,10 @@ smartStock/                              ← raíz del repositorio
         └── wwwroot/                     ← index.html, favicon
 ```
 
-**Dependencias futuras entre proyectos (referencia):**
-- `smartStock.Api`  → referenciará `smartStock.Shared`
-- `smartStock.UI`   → referenciará `smartStock.Shared`
-- `smartStock.Web`  → referenciará `smartStock.UI` y `smartStock.Shared`
+**Dependencias entre proyectos:**
+- `smartStock.Api`  → referencia `smartStock.Shared` (ya activo)
+- `smartStock.UI`   → referenciará `smartStock.Shared` (FUTURO)
+- `smartStock.Web`  → referenciará `smartStock.UI` y `smartStock.Shared` (FUTURO)
 
 ---
 
@@ -85,7 +98,7 @@ src/smartStock.Api/
 │       │   ├── Auth/    → AccesoNoPermitidoException, CuentaInactivaException, CredencialesInvalidasException
 │       │   └── Usuarios/→ DniDuplicadoException, EmailDuplicadoException, UsuarioNoEncontradoException
 │       ├── Interfaces/  → IJwtTokenService, IExceptionHandler
-│       └── Middleware/  → GlobalExceptionHandler
+│       └── Middleware/  → GlobalExceptionHandler, VerificarUsuarioActivoMiddleware
 ├── Infrastructure/
 │   ├── Persistence/     → AppDbContext, EF Configurations, Migrations
 │   └── Services/        → JwtTokenService (implementa IJwtTokenService)
@@ -122,13 +135,30 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 ---
 
 ## Estructura de Features (CQRS)
-Cada feature vive en `src/smartStock.Api/Application/Features/Commands o Queries/{Entidad}/{NombreFeature}/` y contiene:
-- `Commands/` → `{Nombre}Command.cs` (record), `{Nombre}CommandHandler.cs`, `{Nombre}CommandValidator.cs`, `{Nombre}Dto.cs` 
-- `Queries/` → Similar para queries
-- `DTOs/` → Response records
+Los features se organizan por **dominio de actor** en `src/smartStock.Api/Application/Features/{Actor}/{Commands|Queries}/{NombreFeature}/`.
+
+```
+Application/Features/
+├── Admin/              → features que ejecuta el administrador
+│   ├── Commands/
+│   └── Queries/
+├── Empleados/          → features que ejecuta el empleado autenticado
+│   └── Commands/
+├── Auth/               → features de autenticación (login, sin rol requerido)
+│   └── Commands/
+└── {FuturoActor}/      → misma estructura al agregar nuevos actores
+```
+
+Cada carpeta de feature contiene:
+- `{Nombre}Command.cs` / `{Nombre}Query.cs` (record)
+- `{Nombre}CommandHandler.cs` / `{Nombre}QueryHandler.cs`
+- `{Nombre}CommandValidator.cs` (si aplica)
 - `Hubs/` → (reservado para SignalR futuro)
 
+> **Los `*Response.cs` ya NO van dentro del feature en `smartStock.Api`.** Se ubican en `smartStock.Shared/Dtos/{Actor}/{Feature}/{Nombre}Response.cs`, namespace `smartStock.Shared.Dtos.{Actor}.{Feature}`. Igual para `DireccionDto` → `smartStock.Shared.Dtos.Shared`.
+
 **Features implementadas:**
+***Cu01: Gestion De Usuarios**
 *COMMANDS:*
 `RegistrarAdministrador` — CU01-W1: registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno). Endpoint: `POST api/administrador/registrar-administrador`.
 `IniciarSesion` — CU01-W2: inicio de sesión para Administrador y Empleado con email y contraseña. Retorna JWT. Lanza `CredencialesInvalidasException` (401) o `CuentaInactivaException` (403). Endpoint: `POST api/auth/iniciar-sesion`.
@@ -160,7 +190,7 @@ Cada feature vive en `src/smartStock.Api/Application/Features/Commands o Queries
 - Los **Commands** son `sealed record` que implementan `IRequest<TResponse>`, o `IRequest` (sin tipo) si el endpoint retorna 204 No Content
 - Los **Handlers** son `sealed class` que implementan `IRequestHandler<TCommand, TResponse>`, o `IRequestHandler<TCommand>` si no hay respuesta
 - Los **Validators** son `sealed class : AbstractValidator<TCommand>`
-- Los **Responses** son `sealed record`
+- Los **Responses** son `sealed record` ubicados en `smartStock.Shared/Dtos/{Actor}/{Feature}/`, namespace `smartStock.Shared.Dtos.{Actor}.{Feature}`
 - Las **excepciones de dominio** implementan `IExceptionHandler` (expone `CodigoHttp` y `Titulo`)
 - Los **campos calculados** en el dominio llevan comentario `// calculado en app:`
 - Los **snapshots de precio** en items llevan comentario `// snapshot`
@@ -170,7 +200,7 @@ Cada feature vive en `src/smartStock.Api/Application/Features/Commands o Queries
 ### Validaciones
 - Siempre usar **FluentValidation** en el Validator del Command (nunca data annotations en los Commands)
 - Las reglas de Identity (email, password) se integran llamando a `_userManager.UserValidators` / `_userManager.PasswordValidators` dentro de validaciones custom de FluentValidation
-- La validación de dominio DNS del email se hace con `Dns.GetHostAddressesAsync`
+- La validación de dominio DNS del email se hace con `Dns.GetHostAddressesAsync` con timeout de 3 segundos via `CancellationTokenSource.CreateLinkedTokenSource` + `CancelAfter(TimeSpan.FromSeconds(3))`
 
 ### Controllers
 - Heredan de `ControllerBase`
@@ -189,11 +219,18 @@ dotnet build
 dotnet ef migrations add {NombreMigracion} --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
 dotnet ef database update --project src/smartStock.Api
 
+# Migración pendiente: índice único de Administrador en UsuarioRoles
+dotnet ef migrations add UniqueAdminRole --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
+dotnet ef database update --project src/smartStock.Api
+
 # Actualizar herramienta EF
 dotnet tool update --global dotnet-ef --version 10.0.3
 
 # Ejecutar (desde la raíz)
 dotnet run --project src/smartStock.Api
+
+# Seguridad: desrastrear appsettings.Development.json del repositorio git
+git rm --cached src/smartStock.Api/appsettings.Development.json
 ```
 
 ---
@@ -213,7 +250,6 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 |---|---|---|
 | `ValidationException` (FluentValidation) | 400 | Fallos de validación de campos |
 | Excepciones que implementan `IExceptionHandler` | Según `CodigoHttp` | Errores de dominio |
-| `IdentityException` | 422 | Fallos de Identity al crear usuario |
 | Cualquier otra | 500 | Error inesperado |
 
 **Excepciones de dominio implementadas:**
@@ -235,7 +271,7 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 
 ### Implementado ✅
 - Dominio completo (todos los modelos definidos; `Direccion` como Owned Entity)
-- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`; 2 migraciones (`InitialCreate`, `DireccionComoOwned`)
+- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`; 2 migraciones (`InitialCreate`, `DireccionComoOwned`) + **pendiente migrar** `UniqueAdminRole`
 - `IJwtTokenService` (interface) + `JwtTokenService` (implementación en Infrastructure/Services)
 - **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registrar-administrador`
 - **CU01-W2:** `IniciarSesion` → `POST api/auth/iniciar-sesion` (retorna JWT con claims: sub, email, nombre, roles)
@@ -249,6 +285,7 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - **CU01-R2:** `ObtenerListaEmpleados` → `GET api/administrador/obtener-lista-empleados`
 - **CU01-R2:** `ObtenerDetalleEmpleado` → `GET api/administrador/obtener-detalle-empleado/{id:guid}`
 - Roles creados: `"Administrador"`, `"Empleado"`
+- **Seguridad:** `CuentaInactivaException` → 403, rate limiting en login (5 req/min por IP), `VerificarUsuarioActivoMiddleware` (valida `EstaActivo` en cada request autenticado), validación JWT key al arrancar, timeout DNS 3s en validators, índice único filtrado en `UsuarioRoles` para Administrador
 
 ### Pendiente ⏳
 - CRUD de Productos, Categorías, Proveedores
@@ -264,3 +301,32 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - No hardcodear strings de rol → usar constantes privadas en los Handlers (ej: `const string RolAdministrador = "Administrador"`)
 - No calcular campos (Subtotal, Ganancia) en la base de datos → calcular en la capa de aplicación antes de persistir
 - No agregar migraciones sin tener las configuraciones EF correspondientes en `Configurations/`
+- No crear `*Response.cs` dentro de `smartStock.Api` → siempre en `smartStock.Shared/Dtos/{Actor}/{Feature}/`
+- No crear `DireccionDto` ni DTOs de entrada/salida en `smartStock.Api` → van en `smartStock.Shared`
+- No hardcodear `Jwt:Key` en `appsettings.json` → la clave va en `appsettings.Development.json` (local) o en variable de entorno `Jwt__Key` (producción). El app arranca con excepción si la clave está vacía o tiene menos de 32 caracteres
+
+---
+
+## Seguridad
+
+### Clave JWT
+- `appsettings.json` tiene `"Key": ""` — vacío a propósito
+- En desarrollo: la clave está en `appsettings.Development.json` (gitignoreado). Para desrastrearlo: `git rm --cached src/smartStock.Api/appsettings.Development.json`
+- En producción: usar variable de entorno `Jwt__Key` (doble guión bajo = jerarquía de configuración en .NET)
+- El app valida que `Jwt:Key` tenga al menos 32 caracteres al arrancar; falla rápido si no
+
+### Rate limiting
+- Política `"login"`: ventana fija de 1 minuto, máximo 5 requests por IP en `POST api/auth/iniciar-sesion`
+- Retorna `429 Too Many Requests` al superarse
+- Registrado en `Program.cs` con `AddRateLimiter` + `AddPolicy`; aplicado con `[EnableRateLimiting("login")]` en `AuthController`
+
+### Verificación de cuenta activa por request
+- `VerificarUsuarioActivoMiddleware` se ejecuta después de `UseAuthentication` en cada request autenticado
+- Llama a `IUsuarioRepository.EstaActivoAsync(userId)` (query liviana: `AnyAsync(u => u.Id == id && u.EstaActivo)`)
+- Si el usuario fue suspendido, su JWT sigue siendo válido sintácticamente pero el middleware retorna `403` inmediatamente
+- Registro en pipeline: `app.UseAuthentication()` → `app.UseMiddleware<VerificarUsuarioActivoMiddleware>()` → `app.UseAuthorization()`
+
+### Índice único de Administrador
+- `UsuarioRolConfiguration` tiene un índice único filtrado `[Rol] = 'Administrador'` (`UX_UsuarioRoles_Administrador`)
+- Garantiza a nivel de base de datos que solo puede existir un administrador, protegiendo contra race conditions
+- **Requiere migración:** `dotnet ef migrations add UniqueAdminRole --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations`

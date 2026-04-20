@@ -2,13 +2,13 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using smartStock.Api.Application.Features.Commands.Usuarios.AltaEmpleado;
-using smartStock.Api.Application.Features.Commands.Usuarios.CambiarEstadoEmpleado;
-using smartStock.Api.Application.Features.Commands.Usuarios.EliminarEmpleado;
-using smartStock.Api.Application.Features.Commands.Usuarios.RegistrarAdmin;
-using smartStock.Api.Application.Features.Queries.Usuarios.ObtenerDetalleEmpleado;
-using smartStock.Api.Application.Features.Queries.Usuarios.ObtenerListaEmpleados;
-using smartStock.Api.Application.Features.Queries.Usuarios.ObtenerPerfilAdmin;
+using smartStock.Api.Application.Features.Admin.Commands.AltaEmpleado;
+using smartStock.Api.Application.Features.Admin.Commands.CambiarEstadoEmpleado;
+using smartStock.Api.Application.Features.Admin.Commands.EliminarEmpleado;
+using smartStock.Api.Application.Features.Admin.Commands.RegistrarAdmin;
+using smartStock.Api.Application.Features.Admin.Queries.ObtenerDetalleEmpleado;
+using smartStock.Api.Application.Features.Admin.Queries.ObtenerListaEmpleados;
+using smartStock.Api.Application.Features.Admin.Queries.ObtenerPerfilAdmin;
 
 namespace smartStock.Api.Presentation.Controllers.Usuarios.Admin;
 

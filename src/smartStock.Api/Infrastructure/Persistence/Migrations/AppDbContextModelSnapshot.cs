@@ -22,138 +22,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
-
-                    b.ToTable("AspNetRoles", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("AspNetRoleClaims", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("AspNetUserClaims", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
-                {
-                    b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ProviderKey")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("LoginProvider", "ProviderKey");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("AspNetUserLogins", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("UserId", "RoleId");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("AspNetUserRoles", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("UserId", "LoginProvider", "Name");
-
-                    b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("smartStock.Domain.Models.Categoria", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Categoria", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -179,7 +48,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("Categorias");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.CierreCaja", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.CierreCaja", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -218,7 +87,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("CierreCaja");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.ItemTransaccionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.ItemTransaccionCompra", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -250,7 +119,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("ItemTransaccionCompra");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.ItemTransaccionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.ItemTransaccionVenta", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -288,7 +157,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("ItemTransaccionVenta");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.MovimientoStock", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.MovimientoStock", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -334,7 +203,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("MovimientoStock");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Producto", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Producto", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -371,17 +240,13 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("Producto");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Proveedor", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Proveedor", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Cuit")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Direccion")
                         .IsRequired()
@@ -400,7 +265,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("Proveedor");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.SesionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.SesionCompra", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -432,7 +297,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("SesionCompra");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.SesionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.SesionVenta", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -459,7 +324,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("SesionVenta");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.StockActual", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.StockActual", b =>
                 {
                     b.Property<int>("ProductoId")
                         .HasColumnType("int");
@@ -475,7 +340,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("StockActual");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.TransaccionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.TransaccionCompra", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -501,7 +366,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("TransaccionCompra");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.TransaccionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.TransaccionVenta", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -527,18 +392,16 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("TransaccionVenta");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Usuario", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("ContrasenaHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Dni")
                         .IsRequired()
@@ -547,11 +410,9 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .IsFixedLength();
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("EstaActivo")
                         .ValueGeneratedOnAdd()
@@ -561,140 +422,70 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("FechaAlta")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
-
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("NormalizedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedUserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Telefono")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("UserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Dni")
                         .IsUnique();
 
-                    b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
+                    b.HasIndex("Email")
+                        .IsUnique();
 
-                    b.HasIndex("NormalizedUserName")
+                    b.ToTable("Usuarios", (string)null);
+                });
+
+            modelBuilder.Entity("smartStock.Api.Domain.Models.UsuarioRol", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Rol")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("UsuarioId", "Rol");
+
+                    b.HasIndex("Rol")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+                        .HasDatabaseName("UX_UsuarioRoles_Administrador")
+                        .HasFilter("[Rol] = 'Administrador'");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("UsuarioRoles", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.CierreCaja", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
-                {
-                    b.HasOne("smartStock.Domain.Models.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
-                {
-                    b.HasOne("smartStock.Domain.Models.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("smartStock.Domain.Models.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
-                {
-                    b.HasOne("smartStock.Domain.Models.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("smartStock.Domain.Models.CierreCaja", b =>
-                {
-                    b.HasOne("smartStock.Domain.Models.SesionCompra", "SesionCompra")
+                    b.HasOne("smartStock.Api.Domain.Models.SesionCompra", "SesionCompra")
                         .WithOne("CierreCaja")
-                        .HasForeignKey("smartStock.Domain.Models.CierreCaja", "SesionCompraId");
+                        .HasForeignKey("smartStock.Api.Domain.Models.CierreCaja", "SesionCompraId");
 
-                    b.HasOne("smartStock.Domain.Models.SesionVenta", "SesionVenta")
+                    b.HasOne("smartStock.Api.Domain.Models.SesionVenta", "SesionVenta")
                         .WithOne("CierreCaja")
-                        .HasForeignKey("smartStock.Domain.Models.CierreCaja", "SesionVentaId");
+                        .HasForeignKey("smartStock.Api.Domain.Models.CierreCaja", "SesionVentaId");
 
                     b.Navigation("SesionCompra");
 
                     b.Navigation("SesionVenta");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.ItemTransaccionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.ItemTransaccionCompra", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.Producto", "Producto")
+                    b.HasOne("smartStock.Api.Domain.Models.Producto", "Producto")
                         .WithMany()
                         .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("smartStock.Domain.Models.TransaccionCompra", "Transaccion")
+                    b.HasOne("smartStock.Api.Domain.Models.TransaccionCompra", "Transaccion")
                         .WithMany("Items")
                         .HasForeignKey("TransaccionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -705,15 +496,15 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Transaccion");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.ItemTransaccionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.ItemTransaccionVenta", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.Producto", "Producto")
+                    b.HasOne("smartStock.Api.Domain.Models.Producto", "Producto")
                         .WithMany()
                         .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("smartStock.Domain.Models.TransaccionVenta", "Transaccion")
+                    b.HasOne("smartStock.Api.Domain.Models.TransaccionVenta", "Transaccion")
                         .WithMany("Items")
                         .HasForeignKey("TransaccionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -724,23 +515,23 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Transaccion");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.MovimientoStock", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.MovimientoStock", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.ItemTransaccionCompra", "ItemCompra")
+                    b.HasOne("smartStock.Api.Domain.Models.ItemTransaccionCompra", "ItemCompra")
                         .WithOne("Movimiento")
-                        .HasForeignKey("smartStock.Domain.Models.MovimientoStock", "ItemCompraId");
+                        .HasForeignKey("smartStock.Api.Domain.Models.MovimientoStock", "ItemCompraId");
 
-                    b.HasOne("smartStock.Domain.Models.ItemTransaccionVenta", "ItemVenta")
+                    b.HasOne("smartStock.Api.Domain.Models.ItemTransaccionVenta", "ItemVenta")
                         .WithOne("Movimiento")
-                        .HasForeignKey("smartStock.Domain.Models.MovimientoStock", "ItemVentaId");
+                        .HasForeignKey("smartStock.Api.Domain.Models.MovimientoStock", "ItemVentaId");
 
-                    b.HasOne("smartStock.Domain.Models.Producto", "Producto")
+                    b.HasOne("smartStock.Api.Domain.Models.Producto", "Producto")
                         .WithMany("Movimientos")
                         .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("smartStock.Domain.Models.Usuario", "Usuario")
+                    b.HasOne("smartStock.Api.Domain.Models.Usuario", "Usuario")
                         .WithMany("Movimientos")
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -755,15 +546,15 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Producto", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Producto", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.Categoria", "Categoria")
+                    b.HasOne("smartStock.Api.Domain.Models.Categoria", "Categoria")
                         .WithMany("Productos")
                         .HasForeignKey("CategoriaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("smartStock.Domain.Models.Usuario", "UsuarioAlta")
+                    b.HasOne("smartStock.Api.Domain.Models.Usuario", "UsuarioAlta")
                         .WithMany("Productos")
                         .HasForeignKey("UsuarioAltaId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -774,15 +565,15 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("UsuarioAlta");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.SesionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.SesionCompra", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.Proveedor", "Proveedor")
+                    b.HasOne("smartStock.Api.Domain.Models.Proveedor", "Proveedor")
                         .WithMany("SesionesCompra")
                         .HasForeignKey("ProveedorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("smartStock.Domain.Models.Usuario", "Usuario")
+                    b.HasOne("smartStock.Api.Domain.Models.Usuario", "Usuario")
                         .WithMany("SesionesCompra")
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -793,9 +584,9 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.SesionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.SesionVenta", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.Usuario", "Usuario")
+                    b.HasOne("smartStock.Api.Domain.Models.Usuario", "Usuario")
                         .WithMany("SesionesVenta")
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -804,26 +595,26 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.StockActual", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.StockActual", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.Producto", "Producto")
+                    b.HasOne("smartStock.Api.Domain.Models.Producto", "Producto")
                         .WithOne("Stock")
-                        .HasForeignKey("smartStock.Domain.Models.StockActual", "ProductoId")
+                        .HasForeignKey("smartStock.Api.Domain.Models.StockActual", "ProductoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Producto");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.TransaccionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.TransaccionCompra", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.SesionCompra", "SesionCompra")
+                    b.HasOne("smartStock.Api.Domain.Models.SesionCompra", "SesionCompra")
                         .WithMany("Transacciones")
                         .HasForeignKey("SesionCompraId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("smartStock.Domain.Models.Usuario", "Usuario")
+                    b.HasOne("smartStock.Api.Domain.Models.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -834,15 +625,15 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.TransaccionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.TransaccionVenta", b =>
                 {
-                    b.HasOne("smartStock.Domain.Models.SesionVenta", "SesionVenta")
+                    b.HasOne("smartStock.Api.Domain.Models.SesionVenta", "SesionVenta")
                         .WithMany("Transacciones")
                         .HasForeignKey("SesionVentaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("smartStock.Domain.Models.Usuario", "Usuario")
+                    b.HasOne("smartStock.Api.Domain.Models.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -853,9 +644,9 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Usuario", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Usuario", b =>
                 {
-                    b.OwnsOne("smartStock.Domain.Models.Direccion", "Direccion", b1 =>
+                    b.OwnsOne("smartStock.Api.Domain.Models.Direccion", "Direccion", b1 =>
                         {
                             b1.Property<Guid>("UsuarioId")
                                 .HasColumnType("uniqueidentifier");
@@ -892,7 +683,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("UsuarioId");
 
-                            b1.ToTable("AspNetUsers");
+                            b1.ToTable("Usuarios");
 
                             b1.WithOwner()
                                 .HasForeignKey("UsuarioId");
@@ -902,22 +693,33 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Categoria", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.UsuarioRol", b =>
+                {
+                    b.HasOne("smartStock.Api.Domain.Models.Usuario", "Usuario")
+                        .WithMany("Roles")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Categoria", b =>
                 {
                     b.Navigation("Productos");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.ItemTransaccionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.ItemTransaccionCompra", b =>
                 {
                     b.Navigation("Movimiento");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.ItemTransaccionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.ItemTransaccionVenta", b =>
                 {
                     b.Navigation("Movimiento");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Producto", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Producto", b =>
                 {
                     b.Navigation("Movimientos");
 
@@ -925,40 +727,42 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Proveedor", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Proveedor", b =>
                 {
                     b.Navigation("SesionesCompra");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.SesionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.SesionCompra", b =>
                 {
                     b.Navigation("CierreCaja");
 
                     b.Navigation("Transacciones");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.SesionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.SesionVenta", b =>
                 {
                     b.Navigation("CierreCaja");
 
                     b.Navigation("Transacciones");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.TransaccionCompra", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.TransaccionCompra", b =>
                 {
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.TransaccionVenta", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.TransaccionVenta", b =>
                 {
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("smartStock.Domain.Models.Usuario", b =>
+            modelBuilder.Entity("smartStock.Api.Domain.Models.Usuario", b =>
                 {
                     b.Navigation("Movimientos");
 
                     b.Navigation("Productos");
+
+                    b.Navigation("Roles");
 
                     b.Navigation("SesionesCompra");
 

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using smartStock.Api.Application.Common.Exceptions;
-using smartStock.Api.Application.Common.Interfaces;
 using IAspNetExceptionHandler = Microsoft.AspNetCore.Diagnostics.IExceptionHandler;
 
 namespace smartStock.Api.Application.Common.Middleware;
@@ -55,17 +54,12 @@ public sealed class GlobalExceptionHandler : IAspNetExceptionHandler
     {
         ctx.Response.StatusCode = de.CodigoHttp;
 
-        var pd = new ProblemDetails
+        return new ProblemDetails
         {
             Status = de.CodigoHttp,
             Title  = de.Titulo,
             Detail = ex.Message
         };
-
-        if (ex is IdentityException ie)
-            pd.Extensions["errores"] = ie.Errores;
-
-        return pd;
     }
 
     private ProblemDetails BuildInterno(HttpContext ctx, Exception ex)

@@ -2,8 +2,8 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using smartStock.Api.Application.Features.Commands.Usuarios.CambiarContrasena;
-using smartStock.Api.Application.Features.Commands.Usuarios.EditarPerfilEmpleado;
+using smartStock.Api.Application.Features.Empleados.Commands.CambiarContrasena;
+using smartStock.Api.Application.Features.Empleados.Commands.EditarPerfilEmpleado;
 
 namespace smartStock.Api.Presentation.Controllers.Usuarios.Empleado;
 

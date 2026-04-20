@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using smartStock.Api.Application.Features.Commands.Usuarios.IniciarSesion;
+using Microsoft.AspNetCore.RateLimiting;
+using smartStock.Api.Application.Features.Auth.Commands.IniciarSesion;
 
 namespace smartStock.Api.Presentation.Controllers.Auth;
 
@@ -15,6 +16,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// CU01-W2: Inicio de sesión para Administrador y Empleado.
     /// </summary>
+    [EnableRateLimiting("login")]
     [HttpPost("iniciar-sesion")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

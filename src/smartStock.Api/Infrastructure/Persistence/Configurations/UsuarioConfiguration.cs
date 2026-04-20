@@ -8,15 +8,32 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
 {
     public void Configure(EntityTypeBuilder<Usuario> builder)
     {
+        builder.ToTable("Usuarios");
+
+        builder.HasKey(u => u.Id);
+
         builder.Property(u => u.Nombre)
             .IsRequired()
             .HasMaxLength(100);
 
-        // DNI: longitud fija de 8 caracteres definida por el sistema
+        builder.Property(u => u.Email)
+            .IsRequired()
+            .HasMaxLength(256);
+
+        builder.HasIndex(u => u.Email)
+            .IsUnique();
+
+        builder.Property(u => u.ContrasenaHash)
+            .IsRequired()
+            .HasMaxLength(256);
+
         builder.Property(u => u.Dni)
             .IsRequired()
             .HasMaxLength(8)
             .IsFixedLength();
+
+        builder.HasIndex(u => u.Dni)
+            .IsUnique();
 
         builder.Property(u => u.Telefono)
             .IsRequired()
@@ -38,9 +55,5 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(u => u.EstaActivo)
             .IsRequired()
             .HasDefaultValue(true);
-
-        // Índice único sobre DNI
-        builder.HasIndex(u => u.Dni)
-            .IsUnique();
     }
 }

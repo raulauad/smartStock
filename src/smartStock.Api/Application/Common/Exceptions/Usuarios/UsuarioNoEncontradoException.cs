@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http;
-using smartStock.Api.Application.Common.Interfaces;
+using smartStock.Api.Application.Common.Exceptions;
 
 namespace smartStock.Api.Application.Common.Exceptions.Usuarios;
 

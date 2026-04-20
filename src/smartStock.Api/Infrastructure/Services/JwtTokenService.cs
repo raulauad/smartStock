@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using smartStock.Api.Application.Common.Interfaces;
+using smartStock.Api.Application.Common.Interfaces.Auth;
 using smartStock.Api.Domain.Models;
 
 namespace smartStock.Api.Infrastructure.Services;
