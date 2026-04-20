@@ -30,8 +30,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // --- Auth: repositorio y hasher ---
-builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-builder.Services.AddScoped<IPasswordHasher,    BcryptPasswordHasher>();
+builder.Services.AddScoped<IUsuarioRepository,       UsuarioRepository>();
+builder.Services.AddScoped<IPasswordHasher,          BcryptPasswordHasher>();
+builder.Services.AddScoped<ITokenRevocadoRepository, TokenRevocadoRepository>();
 
 // --- JWT ---
 builder.Services.AddAuthentication(options =>

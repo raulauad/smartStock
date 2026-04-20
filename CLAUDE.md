@@ -117,18 +117,18 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 
 | Entidad | Descripción |
 |---|---|
-| `Usuario` | Extiende `IdentityUser<Guid>`. Campos extra: Nombre, Dni, Telefono, Direccion (owned), FechaAlta, EstaActivo |
+| `Usuario` | Extiende `IdentityUser<Guid>`. Campos extra: Nombre, Dni, Telefono, Direccion (owned), FechaAlta, FechaBaja (nullable), EstaActivo |
 | `Direccion` | Owned Entity de Usuario. Campos: Calle, Numero, Piso (nullable), Departamento (nullable), Ciudad, Provincia, CodigoPostal |
-| `Producto` | Tiene PrecioCosto, PrecioVenta, CategoriaId, UsuarioAltaId. Relacionado 1:1 con StockActual |
+| `Producto` | PK Guid. Tiene PrecioCosto, PrecioVenta, CategoriaId (Guid), UsuarioAltaId. Relacionado 1:1 con StockActual |
 | `StockActual` | PK = ProductoId (1:1 con Producto). Cantidad decimal |
-| `MovimientoStock` | Tipo enum (Compra/Venta/Ajuste). FK a Producto, Usuario, y opcionales a ItemVenta/ItemCompra |
-| `SesionVenta` / `SesionCompra` | Agrupan transacciones. Estado: Abierto/Cerrado |
-| `TransaccionVenta` / `TransaccionCompra` | Pertenecen a una sesión. Tienen items |
-| `ItemTransaccionVenta` | Snapshot de PrecioVenta, PrecioCosto, Subtotal, GananciaTotal |
-| `ItemTransaccionCompra` | Snapshot de PrecioCompra y Subtotal |
-| `CierreCaja` | Relacionado 1:1 con SesionVenta y SesionCompra |
-| `Categoria` | Nombre único (max 50), Descripcion (max 300) |
-| `Proveedor` | Cuit único (max 11), Nombre, Telefono, Direccion |
+| `MovimientoStock` | Tipo enum (Compra/Venta/Ajuste). FK a Producto, Usuario, y opcionales a ItemDetalleVenta/ItemDetalleCompra |
+| `VentaDia` / `CompraDia` | Agrupan detalles de una jornada. Tienen Total acumulado y Estado: Abierto/Cerrado |
+| `DetalleVenta` / `DetalleCompra` | Una transacción individual (ticket) dentro de un VentaDia/CompraDia. Tienen items |
+| `ItemDetalleVenta` | Snapshot de PrecioVenta, PrecioCosto, Subtotal, GananciaTotal |
+| `ItemDetalleCompra` | Snapshot de PrecioCompra y Subtotal |
+| `CierreCaja` | Relacionado 1:1 con VentaDia y CompraDia |
+| `Categoria` | PK Guid. Nombre único (max 50), Descripcion (max 300) |
+| `Proveedor` | PK Guid. Campos: Nombre, Cuit (nullable), Telefono, Email, Direccion (owned), Observaciones (nullable), EstaActivo, FechaAlta. FK a UsuarioAlta |
 
 **Enums:** `TipoMovimiento` (Compra, Venta, Ajuste), `EstadoCierre` (Abierto, Cerrado) y `EstadoUsuario` (Suspendido, Activo, Conectado — `Conectado` reservado para SignalR).
 
@@ -165,7 +165,7 @@ Cada carpeta de feature contiene:
 `AltaEmpleado` — CU01-W3: el administrador da de alta un usuario (empleado) dentro del sistema. Requiere `[Authorize(Roles = "Administrador")]`. Endpoint: `POST api/administrador/alta-empleado`.
 `EditarPerfilEmpleado` — CU01-W4 (empleado): el empleado autenticado edita sus propios datos (Nombre, Email, Teléfono, DNI, Dirección). `UsuarioId` extraído del claim `sub` en el controller — nunca del body. Mismas validaciones que CU01-W3 (sin contraseña). Lanza `DniDuplicadoException` o `EmailDuplicadoException` si el dato ya lo usa otro usuario. Endpoint: `PUT api/empleado/editar-perfil-empleado`.
 `CambiarEstadoEmpleado` — CU01-W4/W5 (admin): el administrador activa o suspende un empleado (`EstaActivo`). `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Lanza `EstadoUsuarioSinCambioException` (409) si el estado ya es el solicitado. Endpoint único: `PATCH api/administrador/cambiar-estado-empleado/{id:guid}`.
-`EliminarEmpleado` — CU01-W6: el administrador elimina permanentemente la cuenta de un empleado. `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Sin body ni response (204 No Content) → el Command implementa `IRequest` sin tipo genérico y no tiene Validator. Endpoint: `DELETE api/administrador/eliminar-empleado/{id:guid}`.
+`EliminarEmpleado` — CU01-W6: el administrador realiza un **borrado lógico** de un empleado (`EstaActivo = false`, `FechaBaja = UtcNow`). No elimina la fila — preserva el historial de transacciones. `EmpleadoId` viene de la ruta — nunca del body. Solo aplica a usuarios con rol `Empleado` (lanza `AccesoNoPermitidoException` si se intenta sobre un admin). Sin body ni response (204 No Content) → el Command implementa `IRequest` sin tipo genérico y no tiene Validator. El `VerificarUsuarioActivoMiddleware` bloquea automáticamente cualquier JWT del empleado eliminado. Endpoint: `DELETE api/administrador/eliminar-empleado/{id:guid}`.
 `CambiarContrasena` — CU01-W7: el empleado autenticado cambia su propia contraseña. Requiere `[Authorize(Roles = "Empleado")]`. `UsuarioId` extraído del claim `sub` en el controller — nunca del body. Valida que la contraseña actual sea correcta (lanza `CredencialesInvalidasException` 401 si no lo es) y que la nueva cumpla las reglas de Identity (mín. 8 caracteres, mayúscula, dígito, carácter especial). FA3: confirmación debe coincidir con la nueva (validado en FluentValidation con `.Equal(...)`). Endpoint: `PATCH api/empleado/cambiar-contrasena`.
 
 *QUERIES:*
@@ -219,8 +219,8 @@ dotnet build
 dotnet ef migrations add {NombreMigracion} --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
 dotnet ef database update --project src/smartStock.Api
 
-# Migración pendiente: índice único de Administrador en UsuarioRoles
-dotnet ef migrations add UniqueAdminRole --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
+# Migración pendiente: renombrado de modelos compra/venta
+dotnet ef migrations add RenombrarModelosCompraVenta --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
 dotnet ef database update --project src/smartStock.Api
 
 # Actualizar herramienta EF
@@ -271,7 +271,7 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 
 ### Implementado ✅
 - Dominio completo (todos los modelos definidos; `Direccion` como Owned Entity)
-- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`; 2 migraciones (`InitialCreate`, `DireccionComoOwned`) + **pendiente migrar** `UniqueAdminRole`
+- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`, `ProductoConfiguration`, `MovimientoStockConfiguration`, `CierreCajaConfiguration`, `CompraDiaConfiguration`, `VentaDiaConfiguration`, `ItemDetalleCompraConfiguration`, `ItemDetalleVentaConfiguration`; migraciones aplicadas: `InitialCreate`, `DireccionComoOwned`, `UniqueAdminRole`, `BorradoLogicoEmpleado` — **pendiente migrar:** renombrado de modelos compra/venta
 - `IJwtTokenService` (interface) + `JwtTokenService` (implementación en Infrastructure/Services)
 - **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registrar-administrador`
 - **CU01-W2:** `IniciarSesion` → `POST api/auth/iniciar-sesion` (retorna JWT con claims: sub, email, nombre, roles)
@@ -279,7 +279,7 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - **CU01-W4 (empleado):** `EditarPerfilEmpleado` → `PUT api/empleado/editar-perfil-empleado`
 - **CU01-W4 (admin):** `CambiarEstadoEmpleado` → `PATCH api/administrador/cambiar-estado-empleado/{id:guid}`
 - **CU01-W5:** unificado con CU01-W4 → mismo endpoint `PATCH api/administrador/cambiar-estado-empleado/{id:guid}`
-- **CU01-W6:** `EliminarEmpleado` → `DELETE api/administrador/eliminar-empleado/{id:guid}` (204 No Content)
+- **CU01-W6:** `EliminarEmpleado` → `DELETE api/administrador/eliminar-empleado/{id:guid}` (204 No Content) — borrado lógico (`EstaActivo = false`, `FechaBaja = UtcNow`)
 - **CU01-W7:** `CambiarContrasena` → `PATCH api/empleado/cambiar-contrasena`
 - **CU01-R1:** `ObtenerPerfilAdmin` → `GET api/administrador/obtener-perfil-admin`
 - **CU01-R2:** `ObtenerListaEmpleados` → `GET api/administrador/obtener-lista-empleados`
@@ -288,10 +288,11 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - **Seguridad:** `CuentaInactivaException` → 403, rate limiting en login (5 req/min por IP), `VerificarUsuarioActivoMiddleware` (valida `EstaActivo` en cada request autenticado), validación JWT key al arrancar, timeout DNS 3s en validators, índice único filtrado en `UsuarioRoles` para Administrador
 
 ### Pendiente ⏳
+- Migración EF para renombrado de modelos compra/venta y cambio de PK a Guid en `Categoria` y `Producto` (se pueden combinar en una sola migración: `RenombrarModelosYGuidPks`)
 - CRUD de Productos, Categorías, Proveedores
-- Sesiones de venta/compra, TransaccionVenta/Compra, MovimientoStock, CierreCaja
+- Features de VentaDia/CompraDia, DetalleVenta/DetalleCompra, MovimientoStock, CierreCaja
 - DbSets faltantes en `AppDbContext` (actualmente solo `Categorias`)
-- Configuraciones EF faltantes para Producto, Proveedor, Sesiones, etc.
+- Configuración EF faltante: `ProveedorConfiguration`
 
 ---
 

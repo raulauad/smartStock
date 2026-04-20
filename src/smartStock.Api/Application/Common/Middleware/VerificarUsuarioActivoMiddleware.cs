@@ -11,11 +11,15 @@ public sealed class VerificarUsuarioActivoMiddleware
 
     public VerificarUsuarioActivoMiddleware(RequestDelegate next) => _next = next;
 
-    public async Task InvokeAsync(HttpContext context, IUsuarioRepository usuarioRepository)
+    public async Task InvokeAsync(
+        HttpContext              context,
+        IUsuarioRepository       usuarioRepository,
+        ITokenRevocadoRepository tokenRevocadoRepository)
     {
         if (context.User.Identity?.IsAuthenticated == true)
         {
-            var idClaim = context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            var idClaim  = context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            var jtiClaim = context.User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 
             if (Guid.TryParse(idClaim, out var userId) &&
                 !await usuarioRepository.EstaActivoAsync(userId, context.RequestAborted))
@@ -26,6 +30,19 @@ public sealed class VerificarUsuarioActivoMiddleware
                     Status = StatusCodes.Status403Forbidden,
                     Title  = "Cuenta inactiva",
                     Detail = "La cuenta no está activa. Contacte al administrador."
+                });
+                return;
+            }
+
+            if (jtiClaim is not null &&
+                await tokenRevocadoRepository.EstaRevocadoAsync(jtiClaim, context.RequestAborted))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsJsonAsync(new ProblemDetails
+                {
+                    Status = StatusCodes.Status401Unauthorized,
+                    Title  = "Sesión inválida",
+                    Detail = "La sesión fue cerrada. Inicie sesión nuevamente."
                 });
                 return;
             }

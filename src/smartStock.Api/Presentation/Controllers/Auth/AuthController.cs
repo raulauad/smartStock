@@ -1,6 +1,9 @@
+using System.IdentityModel.Tokens.Jwt;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using smartStock.Api.Application.Features.Auth.Commands.CerrarSesion;
 using smartStock.Api.Application.Features.Auth.Commands.IniciarSesion;
 
 namespace smartStock.Api.Presentation.Controllers.Auth;
@@ -27,5 +30,33 @@ public class AuthController : ControllerBase
     {
         var respuesta = await _mediator.Send(command, cancellationToken);
         return Ok(respuesta);
+    }
+
+    /// <summary>
+    /// CU01-W8: Cierre de sesión para Administrador y Empleado. Revoca el JWT activo.
+    /// </summary>
+    [Authorize]
+    [HttpPost("cerrar-sesion")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> CerrarSesion(CancellationToken cancellationToken)
+    {
+        var jti      = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value ?? string.Empty;
+        var subClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? Guid.Empty.ToString();
+        var expClaim = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
+
+        var expiracion = expClaim is not null && long.TryParse(expClaim, out var expUnix)
+            ? DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime
+            : DateTime.UtcNow;
+
+        var command = new CerrarSesionCommand
+        {
+            Jti        = jti,
+            Expiracion = expiracion,
+            UsuarioId  = Guid.Parse(subClaim)
+        };
+
+        await _mediator.Send(command, cancellationToken);
+        return NoContent();
     }
 }

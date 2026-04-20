@@ -1,16 +1,16 @@
 namespace smartStock.Api.Domain.Models;
 
-public class ItemTransaccionCompra
+public class ItemDetalleCompra
 {
     public int     Id           { get; set; }
     public decimal Cantidad     { get; set; }
     public decimal PrecioCompra { get; set; }   // snapshot
-    public decimal Subtotal     { get; set; }
+    public decimal Subtotal     { get; set; }   // calculado en app: Cantidad * PrecioCompra
 
-    public int               TransaccionId { get; set; }
-    public TransaccionCompra Transaccion   { get; set; } = null!;
+    public int           DetalleCompraId { get; set; }
+    public DetalleCompra DetalleCompra   { get; set; } = null!;
 
-    public int      ProductoId { get; set; }
+    public Guid     ProductoId { get; set; }
     public Producto Producto   { get; set; } = null!;
 
     public MovimientoStock? Movimiento { get; set; }

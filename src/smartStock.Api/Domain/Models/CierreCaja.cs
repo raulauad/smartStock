@@ -8,8 +8,8 @@ public class CierreCaja
     public decimal  TotalCompras { get; set; }
     public decimal  SaldoFinal   { get; set; }   // calculado en app: Ventas - Compras
 
-    public int?          SesionVentaId  { get; set; }   // unique → 1:1
-    public SesionVenta?  SesionVenta    { get; set; }
-    public int?          SesionCompraId { get; set; }   // unique → 1:1
-    public SesionCompra? SesionCompra   { get; set; }
+    public int?      VentaDiaId  { get; set; }   // unique → 1:1
+    public VentaDia? VentaDia   { get; set; }
+    public int?      CompraDiaId { get; set; }   // unique → 1:1
+    public CompraDia? CompraDia  { get; set; }
 }

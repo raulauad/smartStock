@@ -1,17 +1,19 @@
 using smartStock.Api.Domain.Enums;
-
 namespace smartStock.Api.Domain.Models;
 
-public class SesionVenta
+public class CompraDia
 {
     public int          Id          { get; set; }
     public DateTime     FechaSesion { get; set; } = DateTime.UtcNow;
     public decimal      Total       { get; set; }
     public EstadoCierre Estado      { get; set; } = EstadoCierre.Abierto;
 
+    public Guid      ProveedorId { get; set; }
+    public Proveedor Proveedor   { get; set; } = null!;
+
     public Guid    UsuarioId { get; set; }
     public Usuario Usuario   { get; set; } = null!;
 
-    public ICollection<TransaccionVenta> Transacciones { get; set; } = [];
-    public CierreCaja? CierreCaja { get; set; }
+    public ICollection<DetalleCompra> Detalles   { get; set; } = [];
+    public CierreCaja?                CierreCaja { get; set; }
 }

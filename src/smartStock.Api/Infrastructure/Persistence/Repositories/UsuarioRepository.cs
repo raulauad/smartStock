@@ -50,7 +50,9 @@ public sealed class UsuarioRepository : IUsuarioRepository
 
     public async Task EliminarAsync(Usuario usuario, CancellationToken ct = default)
     {
-        _db.Usuarios.Remove(usuario);
+        usuario.EstaActivo = false;
+        usuario.FechaBaja  = DateTime.UtcNow;
+        _db.Usuarios.Update(usuario);
         await _db.SaveChangesAsync(ct);
     }
 }
