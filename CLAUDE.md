@@ -50,10 +50,15 @@ smartStock/                              ← raíz del repositorio
     │   ├── Dtos/
     │   │   ├── Admin/                   ← DTOs de features del actor Admin
     │   │   │   ├── AltaEmpleado/
+    │   │   │   ├── AltaProveedor/
     │   │   │   ├── CambiarEstadoEmpleado/
+    │   │   │   ├── CambiarEstadoProveedor/
+    │   │   │   ├── EditarProveedor/
     │   │   │   ├── RegistrarAdmin/
     │   │   │   ├── ObtenerDetalleEmpleado/
+    │   │   │   ├── ObtenerDetalleProveedor/
     │   │   │   ├── ObtenerListaEmpleados/
+    │   │   │   ├── ObtenerListaProveedores/
     │   │   │   └── ObtenerPerfilAdmin/
     │   │   ├── Auth/                    ← DTOs de features de Auth
     │   │   │   └── IniciarSesion/
@@ -94,13 +99,20 @@ src/smartStock.Api/
 │   └── Common/
 │       ├── Behaviors/   → ValidationBehavior (pipeline MediatR)
 │       ├── Exceptions/  → Excepciones de dominio que implementan IExceptionHandler
-│       │   ├── Admin/   → AdminYaExisteException
-│       │   ├── Auth/    → AccesoNoPermitidoException, CuentaInactivaException, CredencialesInvalidasException
-│       │   └── Usuarios/→ DniDuplicadoException, EmailDuplicadoException, UsuarioNoEncontradoException
-│       ├── Interfaces/  → IJwtTokenService, IExceptionHandler
-│       └── Middleware/  → GlobalExceptionHandler, VerificarUsuarioActivoMiddleware
+│       │   ├── Admin/       → AdminYaExisteException
+│       │   ├── Auth/        → AccesoNoPermitidoException, CuentaInactivaException, CredencialesInvalidasException
+│       │   ├── Proveedores/ → CuitDuplicadoException, EstadoProveedorSinCambioException,
+│       │   │                   NombreEmailDuplicadoException, NombreTelefonoDuplicadoException,
+│       │   │                   ProveedorNoEncontradoException
+│       │   └── Usuarios/    → DniDuplicadoException, EmailDuplicadoException,
+│       │                       EstadoUsuarioSinCambioException, UsuarioNoEncontradoException
+│       ├── Interfaces/  → IJwtTokenService, IExceptionHandler, IUsuarioRepository,
+│       │                   ITokenRevocadoRepository, IProveedorRepository
+│       ├── Middleware/  → GlobalExceptionHandler, VerificarUsuarioActivoMiddleware
+│       └── Validators/  → EmailDomainValidator (DNS check compartido)
 ├── Infrastructure/
 │   ├── Persistence/     → AppDbContext, EF Configurations, Migrations
+│   │   └── Repositories/→ UsuarioRepository, TokenRevocadoRepository, ProveedorRepository
 │   └── Services/        → JwtTokenService (implementa IJwtTokenService)
 └── Presentation/
     └── Controllers/
@@ -128,7 +140,7 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 | `ItemDetalleCompra` | Snapshot de PrecioCompra y Subtotal |
 | `CierreCaja` | Relacionado 1:1 con VentaDia y CompraDia |
 | `Categoria` | PK Guid. Nombre único (max 50), Descripcion (max 300) |
-| `Proveedor` | PK Guid. Campos: Nombre, Cuit (nullable), Telefono, Email, Direccion (owned), Observaciones (nullable), EstaActivo, FechaAlta. FK a UsuarioAlta |
+| `Proveedor` | PK Guid. Campos: Nombre, Cuit (nullable, CHAR 11), Telefono, Email, Direccion (owned), Observaciones (nullable), EstaActivo, FechaAlta. FK a UsuarioAlta |
 
 **Enums:** `TipoMovimiento` (Compra, Venta, Ajuste), `EstadoCierre` (Abierto, Cerrado) y `EstadoUsuario` (Suspendido, Activo, Conectado — `Conectado` reservado para SignalR).
 
@@ -152,13 +164,13 @@ Application/Features/
 Cada carpeta de feature contiene:
 - `{Nombre}Command.cs` / `{Nombre}Query.cs` (record)
 - `{Nombre}CommandHandler.cs` / `{Nombre}QueryHandler.cs`
-- `{Nombre}CommandValidator.cs` (si aplica)
+- `{Nombre}CommandValidator.cs` (si aplica) — co-ubicado con su command
 - `Hubs/` → (reservado para SignalR futuro)
 
 > **Los `*Response.cs` ya NO van dentro del feature en `smartStock.Api`.** Se ubican en `smartStock.Shared/Dtos/{Actor}/{Feature}/{Nombre}Response.cs`, namespace `smartStock.Shared.Dtos.{Actor}.{Feature}`. Igual para `DireccionDto` → `smartStock.Shared.Dtos.Shared`.
 
 **Features implementadas:**
-***Cu01: Gestion De Usuarios**
+***CU01: Gestión De Usuarios**
 *COMMANDS:*
 `RegistrarAdministrador` — CU01-W1: registra el administrador del sistema (operación única, lanza `AdminYaExisteException` si ya existe uno). Endpoint: `POST api/administrador/registrar-administrador`.
 `IniciarSesion` — CU01-W2: inicio de sesión para Administrador y Empleado con email y contraseña. Retorna JWT. Lanza `CredencialesInvalidasException` (401) o `CuentaInactivaException` (403). Endpoint: `POST api/auth/iniciar-sesion`.
@@ -172,6 +184,18 @@ Cada carpeta de feature contiene:
 `ObtenerPerfilAdmin` — CU01-R1: obtiene el perfil del administrador autenticado (datos de Usuario). Requiere `[Authorize(Roles = "Administrador")]`. Extrae el `adminId` desde el claim `"sub"`. Endpoint: `GET api/administrador/obtener-perfil-admin`.
 `ObtenerListaEmpleados` — CU01-R2: el ADMINISTRADOR obtiene el listado de empleados con estado activo/inactivo. Endpoint: `GET api/administrador/obtener-lista-empleados`.
 `ObtenerDetalleEmpleado` — CU01-R2: el ADMINISTRADOR consulta todos los datos de un empleado por su `Id`. Endpoint: `GET api/administrador/obtener-detalle-empleado/{id:guid}`.
+
+---
+
+***CU02: Gestión De Proveedores**
+*COMMANDS:*
+`AltaProveedor` — CU02-W1: el administrador da de alta un proveedor en estado activo. `UsuarioAltaId` extraído del claim `sub` en el controller — nunca del body. Valida unicidad de CUIT (opcional, exactamente 11 dígitos), Nombre+Email y Nombre+Teléfono. Lanza `CuitDuplicadoException`, `NombreEmailDuplicadoException` o `NombreTelefonoDuplicadoException` (409). Endpoint: `POST api/administrador/alta-proveedor`.
+`EditarProveedor` — CU02-W2: edita datos de un proveedor existente. `ProveedorId` viene de la ruta — nunca del body. Mismas validaciones de unicidad excluyendo el propio registro. Lanza `ProveedorNoEncontradoException` (404). Endpoint: `PUT api/administrador/editar-proveedor/{id:guid}`.
+`CambiarEstadoProveedor` — CU02-W3: activa o desactiva un proveedor. `ProveedorId` viene de la ruta. Lanza `EstadoProveedorSinCambioException` (409) si el estado ya es el solicitado. Sin validator (solo un bool en el body). Endpoint: `PATCH api/administrador/cambiar-estado-proveedor/{id:guid}`.
+
+*QUERIES:*
+`ObtenerListaProveedores` — CU02-R1: lista proveedores con filtro opcional por estado (`activo`/`inactivo`) y búsqueda por Nombre, CUIT o Email (`[FromQuery]`). Endpoint: `GET api/administrador/obtener-lista-proveedores?filtroEstado=&busqueda=`.
+`ObtenerDetalleProveedor` — CU02-R2: detalle completo de un proveedor incluyendo el nombre del admin que lo dio de alta (JOIN via EF projection). Lanza `ProveedorNoEncontradoException` (404). Endpoint: `GET api/administrador/obtener-detalle-proveedor/{id:guid}`.
 
 ---
 
@@ -189,18 +213,19 @@ Cada carpeta de feature contiene:
 ### Patrones obligatorios
 - Los **Commands** son `sealed record` que implementan `IRequest<TResponse>`, o `IRequest` (sin tipo) si el endpoint retorna 204 No Content
 - Los **Handlers** son `sealed class` que implementan `IRequestHandler<TCommand, TResponse>`, o `IRequestHandler<TCommand>` si no hay respuesta
-- Los **Validators** son `sealed class : AbstractValidator<TCommand>`
+- Los **Validators** son `sealed class : AbstractValidator<TCommand>`, co-ubicados con su command en la carpeta del feature
 - Los **Responses** son `sealed record` ubicados en `smartStock.Shared/Dtos/{Actor}/{Feature}/`, namespace `smartStock.Shared.Dtos.{Actor}.{Feature}`
 - Las **excepciones de dominio** implementan `IExceptionHandler` (expone `CodigoHttp` y `Titulo`)
 - Los **campos calculados** en el dominio llevan comentario `// calculado en app:`
 - Los **snapshots de precio** en items llevan comentario `// snapshot`
 - Las **configuraciones de EF** van en `src/smartStock.Api/Infrastructure/Persistence/Configurations/` como `IEntityTypeConfiguration<T>`, una clase por entidad
-- Los **IDs sensibles** (userId, empleadoId) que provienen de JWT o de la ruta se declaran como `{ get; init; }` fuera del constructor del record y son sobreescritos en el controller con `command with { ... }` — nunca se leen del body
+- Los **IDs sensibles** (userId, empleadoId, proveedorId) que provienen de JWT o de la ruta se declaran como `{ get; init; }` fuera del constructor del record y son sobreescritos en el controller con `command with { ... }` — nunca se leen del body
 
 ### Validaciones
 - Siempre usar **FluentValidation** en el Validator del Command (nunca data annotations en los Commands)
+- La validación DNS del email se centraliza en `Application/Common/Validators/EmailDomainValidator.DominioExisteAsync` (static, timeout 3s). Llamar con `.MustAsync(EmailDomainValidator.DominioExisteAsync)` — no duplicar el método en cada validator
+- **DNI:** 7 u 8 dígitos numéricos (`^\d{7,8}$`). Regla uniforme para Administrador y Empleado
 - Las reglas de Identity (email, password) se integran llamando a `_userManager.UserValidators` / `_userManager.PasswordValidators` dentro de validaciones custom de FluentValidation
-- La validación de dominio DNS del email se hace con `Dns.GetHostAddressesAsync` con timeout de 3 segundos via `CancellationTokenSource.CreateLinkedTokenSource` + `CancelAfter(TimeSpan.FromSeconds(3))`
 
 ### Controllers
 - Heredan de `ControllerBase`
@@ -219,8 +244,8 @@ dotnet build
 dotnet ef migrations add {NombreMigracion} --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
 dotnet ef database update --project src/smartStock.Api
 
-# Migración pendiente: renombrado de modelos compra/venta
-dotnet ef migrations add RenombrarModelosCompraVenta --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
+# Migración pendiente: renombrado de modelos compra/venta + Guid PKs
+dotnet ef migrations add RenombrarModelosYGuidPks --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations
 dotnet ef database update --project src/smartStock.Api
 
 # Actualizar herramienta EF
@@ -264,6 +289,11 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 | `EmailDuplicadoException` | 409 | Ya existe un usuario con ese email |
 | `UsuarioNoEncontradoException` | 404 | No se encontró el usuario solicitado |
 | `EstadoUsuarioSinCambioException` | 409 | Se intenta desactivar a un usuario ya suspendido, o reactivar a uno ya activo |
+| `ProveedorNoEncontradoException` | 404 | No se encontró el proveedor solicitado |
+| `CuitDuplicadoException` | 409 | Ya existe un proveedor con ese CUIT |
+| `NombreEmailDuplicadoException` | 409 | Ya existe un proveedor con la misma combinación Nombre+Email |
+| `NombreTelefonoDuplicadoException` | 409 | Ya existe un proveedor con la misma combinación Nombre+Teléfono |
+| `EstadoProveedorSinCambioException` | 409 | Se intenta activar/desactivar un proveedor que ya tiene ese estado |
 
 ---
 
@@ -271,8 +301,10 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 
 ### Implementado ✅
 - Dominio completo (todos los modelos definidos; `Direccion` como Owned Entity)
-- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`, `ProductoConfiguration`, `MovimientoStockConfiguration`, `CierreCajaConfiguration`, `CompraDiaConfiguration`, `VentaDiaConfiguration`, `ItemDetalleCompraConfiguration`, `ItemDetalleVentaConfiguration`; migraciones aplicadas: `InitialCreate`, `DireccionComoOwned`, `UniqueAdminRole`, `BorradoLogicoEmpleado` — **pendiente migrar:** renombrado de modelos compra/venta
+- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`, `ProductoConfiguration`, `MovimientoStockConfiguration`, `CierreCajaConfiguration`, `CompraDiaConfiguration`, `VentaDiaConfiguration`, `ItemDetalleCompraConfiguration`, `ItemDetalleVentaConfiguration`, `ProveedorConfiguration`
+- Migraciones aplicadas: `InitialCreate`, `DireccionComoOwned`, `UniqueAdminRole`, `BorradoLogicoEmpleado` — **pendiente migrar:** renombrado de modelos compra/venta + Guid PKs (`RenombrarModelosYGuidPks`)
 - `IJwtTokenService` (interface) + `JwtTokenService` (implementación en Infrastructure/Services)
+- **Repositorios:** `IUsuarioRepository` / `UsuarioRepository`, `ITokenRevocadoRepository` / `TokenRevocadoRepository`, `IProveedorRepository` / `ProveedorRepository`
 - **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registrar-administrador`
 - **CU01-W2:** `IniciarSesion` → `POST api/auth/iniciar-sesion` (retorna JWT con claims: sub, email, nombre, roles)
 - **CU01-W3:** `AltaEmpleado` → `POST api/administrador/alta-empleado`
@@ -284,15 +316,19 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - **CU01-R1:** `ObtenerPerfilAdmin` → `GET api/administrador/obtener-perfil-admin`
 - **CU01-R2:** `ObtenerListaEmpleados` → `GET api/administrador/obtener-lista-empleados`
 - **CU01-R2:** `ObtenerDetalleEmpleado` → `GET api/administrador/obtener-detalle-empleado/{id:guid}`
+- **CU02-W1:** `AltaProveedor` → `POST api/administrador/alta-proveedor`
+- **CU02-W2:** `EditarProveedor` → `PUT api/administrador/editar-proveedor/{id:guid}`
+- **CU02-W3:** `CambiarEstadoProveedor` → `PATCH api/administrador/cambiar-estado-proveedor/{id:guid}`
+- **CU02-R1:** `ObtenerListaProveedores` → `GET api/administrador/obtener-lista-proveedores?filtroEstado=&busqueda=`
+- **CU02-R2:** `ObtenerDetalleProveedor` → `GET api/administrador/obtener-detalle-proveedor/{id:guid}`
 - Roles creados: `"Administrador"`, `"Empleado"`
-- **Seguridad:** `CuentaInactivaException` → 403, rate limiting en login (5 req/min por IP), `VerificarUsuarioActivoMiddleware` (valida `EstaActivo` en cada request autenticado), validación JWT key al arrancar, timeout DNS 3s en validators, índice único filtrado en `UsuarioRoles` para Administrador
+- **Seguridad:** `CuentaInactivaException` → 403, rate limiting en login (5 req/min por IP), `VerificarUsuarioActivoMiddleware` (valida `EstaActivo` en cada request autenticado), validación JWT key al arrancar, timeout DNS 3s centralizado en `EmailDomainValidator`, índice único filtrado en `UsuarioRoles` para Administrador, índice único filtrado en CUIT de Proveedor
 
 ### Pendiente ⏳
-- Migración EF para renombrado de modelos compra/venta y cambio de PK a Guid en `Categoria` y `Producto` (se pueden combinar en una sola migración: `RenombrarModelosYGuidPks`)
-- CRUD de Productos, Categorías, Proveedores
+- Migración EF: renombrado de modelos compra/venta y cambio de PK a Guid en `Categoria` y `Producto` (combinar en `RenombrarModelosYGuidPks`)
+- CRUD de Productos y Categorías
 - Features de VentaDia/CompraDia, DetalleVenta/DetalleCompra, MovimientoStock, CierreCaja
-- DbSets faltantes en `AppDbContext` (actualmente solo `Categorias`)
-- Configuración EF faltante: `ProveedorConfiguration`
+- DbSets faltantes en `AppDbContext` (actualmente solo `Categorias` y `Proveedores`)
 
 ---
 
@@ -305,6 +341,8 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - No crear `*Response.cs` dentro de `smartStock.Api` → siempre en `smartStock.Shared/Dtos/{Actor}/{Feature}/`
 - No crear `DireccionDto` ni DTOs de entrada/salida en `smartStock.Api` → van en `smartStock.Shared`
 - No hardcodear `Jwt:Key` en `appsettings.json` → la clave va en `appsettings.Development.json` (local) o en variable de entorno `Jwt__Key` (producción). El app arranca con excepción si la clave está vacía o tiene menos de 32 caracteres
+- No duplicar `DominioExisteAsync` en los validators → usar `EmailDomainValidator.DominioExisteAsync` de `Application/Common/Validators/`
+- No leer IDs sensibles (userId, proveedorId, empleadoId) del body → siempre de JWT claim `sub` o de la ruta, inyectados con `command with { ... }` en el controller
 
 ---
 
@@ -325,9 +363,13 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - `VerificarUsuarioActivoMiddleware` se ejecuta después de `UseAuthentication` en cada request autenticado
 - Llama a `IUsuarioRepository.EstaActivoAsync(userId)` (query liviana: `AnyAsync(u => u.Id == id && u.EstaActivo)`)
 - Si el usuario fue suspendido, su JWT sigue siendo válido sintácticamente pero el middleware retorna `403` inmediatamente
+- Solo actúa cuando `context.User.Identity.IsAuthenticated == true` → rutas públicas (login, registrar-admin) se saltan el check automáticamente
 - Registro en pipeline: `app.UseAuthentication()` → `app.UseMiddleware<VerificarUsuarioActivoMiddleware>()` → `app.UseAuthorization()`
 
 ### Índice único de Administrador
 - `UsuarioRolConfiguration` tiene un índice único filtrado `[Rol] = 'Administrador'` (`UX_UsuarioRoles_Administrador`)
 - Garantiza a nivel de base de datos que solo puede existir un administrador, protegiendo contra race conditions
-- **Requiere migración:** `dotnet ef migrations add UniqueAdminRole --project src/smartStock.Api --output-dir Infrastructure/Persistence/Migrations`
+
+### Índice único de CUIT en Proveedor
+- `ProveedorConfiguration` tiene un índice único filtrado donde CUIT no es null (`UX_Proveedores_Cuit`)
+- Permite múltiples proveedores sin CUIT, pero garantiza unicidad cuando se ingresa uno

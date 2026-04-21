@@ -33,6 +33,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IUsuarioRepository,       UsuarioRepository>();
 builder.Services.AddScoped<IPasswordHasher,          BcryptPasswordHasher>();
 builder.Services.AddScoped<ITokenRevocadoRepository, TokenRevocadoRepository>();
+builder.Services.AddScoped<IProveedorRepository,     ProveedorRepository>();
 
 // --- JWT ---
 builder.Services.AddAuthentication(options =>

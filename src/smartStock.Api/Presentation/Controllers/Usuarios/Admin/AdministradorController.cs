@@ -3,11 +3,16 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using smartStock.Api.Application.Features.Admin.Commands.AltaEmpleado;
+using smartStock.Api.Application.Features.Admin.Commands.AltaProveedor;
 using smartStock.Api.Application.Features.Admin.Commands.CambiarEstadoEmpleado;
+using smartStock.Api.Application.Features.Admin.Commands.CambiarEstadoProveedor;
+using smartStock.Api.Application.Features.Admin.Commands.EditarProveedor;
 using smartStock.Api.Application.Features.Admin.Commands.EliminarEmpleado;
 using smartStock.Api.Application.Features.Admin.Commands.RegistrarAdmin;
 using smartStock.Api.Application.Features.Admin.Queries.ObtenerDetalleEmpleado;
+using smartStock.Api.Application.Features.Admin.Queries.ObtenerDetalleProveedor;
 using smartStock.Api.Application.Features.Admin.Queries.ObtenerListaEmpleados;
+using smartStock.Api.Application.Features.Admin.Queries.ObtenerListaProveedores;
 using smartStock.Api.Application.Features.Admin.Queries.ObtenerPerfilAdmin;
 
 namespace smartStock.Api.Presentation.Controllers.Usuarios.Admin;
@@ -134,6 +139,100 @@ public class AdministradorController : ControllerBase
     {
         var commandConId = command with { EmpleadoId = id };
         var respuesta = await _mediator.Send(commandConId, cancellationToken);
+        return Ok(respuesta);
+    }
+
+    // ── Proveedores ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// CU02-W1: Da de alta un nuevo proveedor en estado activo.
+    /// </summary>
+    [HttpPost("alta-proveedor")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AltaProveedor(
+        [FromBody] AltaProveedorCommand command,
+        CancellationToken cancellationToken)
+    {
+        var adminId       = Guid.Parse(User.FindFirstValue("sub")
+                            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var commandConId  = command with { UsuarioAltaId = adminId };
+        var respuesta     = await _mediator.Send(commandConId, cancellationToken);
+        return Created(string.Empty, respuesta);
+    }
+
+    /// <summary>
+    /// CU02-W2: Edita los datos de un proveedor existente.
+    /// </summary>
+    [HttpPut("editar-proveedor/{id:guid}")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> EditarProveedor(
+        Guid id,
+        [FromBody] EditarProveedorCommand command,
+        CancellationToken cancellationToken)
+    {
+        var commandConId = command with { ProveedorId = id };
+        var respuesta    = await _mediator.Send(commandConId, cancellationToken);
+        return Ok(respuesta);
+    }
+
+    /// <summary>
+    /// CU02-W3: Desactiva o reactiva un proveedor. Lanza 409 si el estado ya es el solicitado.
+    /// </summary>
+    [HttpPatch("cambiar-estado-proveedor/{id:guid}")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CambiarEstadoProveedor(
+        Guid id,
+        [FromBody] CambiarEstadoProveedorCommand command,
+        CancellationToken cancellationToken)
+    {
+        var commandConId = command with { ProveedorId = id };
+        var respuesta    = await _mediator.Send(commandConId, cancellationToken);
+        return Ok(respuesta);
+    }
+
+    /// <summary>
+    /// CU02-R1: Lista todos los proveedores con filtro opcional por estado y búsqueda por nombre, CUIT o email.
+    /// </summary>
+    [HttpGet("obtener-lista-proveedores")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ObtenerListaProveedores(
+        [FromQuery] string? filtroEstado,
+        [FromQuery] string? busqueda,
+        CancellationToken cancellationToken)
+    {
+        var respuesta = await _mediator.Send(
+            new ObtenerListaProveedoresQuery(filtroEstado, busqueda), cancellationToken);
+        return Ok(respuesta);
+    }
+
+    /// <summary>
+    /// CU02-R2: Consulta el detalle completo de un proveedor por su Id.
+    /// </summary>
+    [HttpGet("obtener-detalle-proveedor/{id:guid}")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ObtenerDetalleProveedor(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var respuesta = await _mediator.Send(new ObtenerDetalleProveedorQuery(id), cancellationToken);
         return Ok(respuesta);
     }
 }
