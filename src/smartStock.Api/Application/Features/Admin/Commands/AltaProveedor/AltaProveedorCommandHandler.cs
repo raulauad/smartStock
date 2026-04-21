@@ -23,13 +23,15 @@ public sealed class AltaProveedorCommandHandler
             await _proveedorRepository.CuitExisteAsync(command.Cuit, null, cancellationToken))
             throw new CuitDuplicadoException();
 
-        // FA3: Nombre+Email duplicado
-        if (await _proveedorRepository.NombreEmailExisteAsync(command.Nombre, command.Email, null, cancellationToken))
-            throw new NombreEmailDuplicadoException();
+        // FA3: unicidad de nombre, email y teléfono
+        if (await _proveedorRepository.NombreExisteAsync(command.Nombre, null, cancellationToken))
+            throw new NombreDuplicadoException();
 
-        // FA3: Nombre+Teléfono duplicado
-        if (await _proveedorRepository.NombreTelefonoExisteAsync(command.Nombre, command.Telefono, null, cancellationToken))
-            throw new NombreTelefonoDuplicadoException();
+        if (await _proveedorRepository.EmailExisteAsync(command.Email, null, cancellationToken))
+            throw new EmailProveedorDuplicadoException();
+
+        if (await _proveedorRepository.TelefonoExisteAsync(command.Telefono, null, cancellationToken))
+            throw new TelefonoDuplicadoException();
 
         var proveedor = new Proveedor
         {

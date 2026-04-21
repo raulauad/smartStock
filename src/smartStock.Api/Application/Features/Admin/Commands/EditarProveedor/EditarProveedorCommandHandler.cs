@@ -26,13 +26,15 @@ public sealed class EditarProveedorCommandHandler
             await _proveedorRepository.CuitExisteAsync(command.Cuit, command.ProveedorId, cancellationToken))
             throw new CuitDuplicadoException();
 
-        // FA3: Nombre+Email duplicado en otro proveedor
-        if (await _proveedorRepository.NombreEmailExisteAsync(command.Nombre, command.Email, command.ProveedorId, cancellationToken))
-            throw new NombreEmailDuplicadoException();
+        // FA3: unicidad de nombre, email y teléfono en otro proveedor
+        if (await _proveedorRepository.NombreExisteAsync(command.Nombre, command.ProveedorId, cancellationToken))
+            throw new NombreDuplicadoException();
 
-        // FA3: Nombre+Teléfono duplicado en otro proveedor
-        if (await _proveedorRepository.NombreTelefonoExisteAsync(command.Nombre, command.Telefono, command.ProveedorId, cancellationToken))
-            throw new NombreTelefonoDuplicadoException();
+        if (await _proveedorRepository.EmailExisteAsync(command.Email, command.ProveedorId, cancellationToken))
+            throw new EmailProveedorDuplicadoException();
+
+        if (await _proveedorRepository.TelefonoExisteAsync(command.Telefono, command.ProveedorId, cancellationToken))
+            throw new TelefonoDuplicadoException();
 
         proveedor.Nombre        = command.Nombre;
         proveedor.Cuit          = command.Cuit;

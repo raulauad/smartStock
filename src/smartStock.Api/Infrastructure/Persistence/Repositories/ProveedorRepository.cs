@@ -18,13 +18,17 @@ public sealed class ProveedorRepository : IProveedorRepository
         => _db.Proveedores.AnyAsync(
                p => p.Cuit == cuit && (excluirId == null || p.Id != excluirId), ct);
 
-    public Task<bool> NombreEmailExisteAsync(string nombre, string email, Guid? excluirId, CancellationToken ct = default)
+    public Task<bool> NombreExisteAsync(string nombre, Guid? excluirId, CancellationToken ct = default)
         => _db.Proveedores.AnyAsync(
-               p => p.Nombre == nombre && p.Email == email && (excluirId == null || p.Id != excluirId), ct);
+               p => p.Nombre == nombre && (excluirId == null || p.Id != excluirId), ct);
 
-    public Task<bool> NombreTelefonoExisteAsync(string nombre, string telefono, Guid? excluirId, CancellationToken ct = default)
+    public Task<bool> EmailExisteAsync(string email, Guid? excluirId, CancellationToken ct = default)
         => _db.Proveedores.AnyAsync(
-               p => p.Nombre == nombre && p.Telefono == telefono && (excluirId == null || p.Id != excluirId), ct);
+               p => p.Email == email && (excluirId == null || p.Id != excluirId), ct);
+
+    public Task<bool> TelefonoExisteAsync(string telefono, Guid? excluirId, CancellationToken ct = default)
+        => _db.Proveedores.AnyAsync(
+               p => p.Telefono == telefono && (excluirId == null || p.Id != excluirId), ct);
 
     public async Task CrearAsync(Proveedor proveedor, CancellationToken ct = default)
     {

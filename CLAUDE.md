@@ -102,8 +102,8 @@ src/smartStock.Api/
 │       │   ├── Admin/       → AdminYaExisteException
 │       │   ├── Auth/        → AccesoNoPermitidoException, CuentaInactivaException, CredencialesInvalidasException
 │       │   ├── Proveedores/ → CuitDuplicadoException, EstadoProveedorSinCambioException,
-│       │   │                   NombreEmailDuplicadoException, NombreTelefonoDuplicadoException,
-│       │   │                   ProveedorNoEncontradoException
+│       │   │                   NombreDuplicadoException, EmailProveedorDuplicadoException,
+│       │   │                   TelefonoDuplicadoException, ProveedorNoEncontradoException
 │       │   └── Usuarios/    → DniDuplicadoException, EmailDuplicadoException,
 │       │                       EstadoUsuarioSinCambioException, UsuarioNoEncontradoException
 │       ├── Interfaces/  → IJwtTokenService, IExceptionHandler, IUsuarioRepository,
@@ -189,7 +189,7 @@ Cada carpeta de feature contiene:
 
 ***CU02: Gestión De Proveedores**
 *COMMANDS:*
-`AltaProveedor` — CU02-W1: el administrador da de alta un proveedor en estado activo. `UsuarioAltaId` extraído del claim `sub` en el controller — nunca del body. Valida unicidad de CUIT (opcional, exactamente 11 dígitos), Nombre+Email y Nombre+Teléfono. Lanza `CuitDuplicadoException`, `NombreEmailDuplicadoException` o `NombreTelefonoDuplicadoException` (409). Endpoint: `POST api/administrador/alta-proveedor`.
+`AltaProveedor` — CU02-W1: el administrador da de alta un proveedor en estado activo. `UsuarioAltaId` extraído del claim `sub` en el controller — nunca del body. Valida unicidad individual de CUIT (opcional, exactamente 11 dígitos), Nombre, Email y Teléfono. Lanza `CuitDuplicadoException`, `NombreDuplicadoException`, `EmailProveedorDuplicadoException` o `TelefonoDuplicadoException` (409). Endpoint: `POST api/administrador/alta-proveedor`.
 `EditarProveedor` — CU02-W2: edita datos de un proveedor existente. `ProveedorId` viene de la ruta — nunca del body. Mismas validaciones de unicidad excluyendo el propio registro. Lanza `ProveedorNoEncontradoException` (404). Endpoint: `PUT api/administrador/editar-proveedor/{id:guid}`.
 `CambiarEstadoProveedor` — CU02-W3: activa o desactiva un proveedor. `ProveedorId` viene de la ruta. Lanza `EstadoProveedorSinCambioException` (409) si el estado ya es el solicitado. Sin validator (solo un bool en el body). Endpoint: `PATCH api/administrador/cambiar-estado-proveedor/{id:guid}`.
 
@@ -291,8 +291,9 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 | `EstadoUsuarioSinCambioException` | 409 | Se intenta desactivar a un usuario ya suspendido, o reactivar a uno ya activo |
 | `ProveedorNoEncontradoException` | 404 | No se encontró el proveedor solicitado |
 | `CuitDuplicadoException` | 409 | Ya existe un proveedor con ese CUIT |
-| `NombreEmailDuplicadoException` | 409 | Ya existe un proveedor con la misma combinación Nombre+Email |
-| `NombreTelefonoDuplicadoException` | 409 | Ya existe un proveedor con la misma combinación Nombre+Teléfono |
+| `NombreDuplicadoException` | 409 | Ya existe un proveedor con ese nombre |
+| `EmailProveedorDuplicadoException` | 409 | Ya existe un proveedor con ese email |
+| `TelefonoDuplicadoException` | 409 | Ya existe un proveedor con ese teléfono |
 | `EstadoProveedorSinCambioException` | 409 | Se intenta activar/desactivar un proveedor que ya tiene ese estado |
 
 ---
