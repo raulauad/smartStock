@@ -24,13 +24,22 @@ public sealed class ProveedorConfiguration : IEntityTypeConfiguration<Proveedor>
             .IsUnique()
             .HasFilter("[Cuit] IS NOT NULL");
 
+        builder.HasIndex(p => p.Nombre)
+            .IsUnique();
+
         builder.Property(p => p.Telefono)
             .IsRequired()
             .HasMaxLength(20);
 
+        builder.HasIndex(p => p.Telefono)
+            .IsUnique();
+
         builder.Property(p => p.Email)
             .IsRequired()
             .HasMaxLength(256);
+
+        builder.HasIndex(p => p.Email)
+            .IsUnique();
 
         builder.OwnsOne(p => p.Direccion, d =>
         {

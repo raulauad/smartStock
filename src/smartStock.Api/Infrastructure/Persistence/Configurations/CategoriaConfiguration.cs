@@ -18,9 +18,19 @@ public sealed class CategoriaConfiguration : IEntityTypeConfiguration<Categoria>
             .HasMaxLength(50);
 
         builder.Property(c => c.Descripcion)
-            .HasMaxLength(300);
+            .HasMaxLength(250);
 
-        // Nombre de categoría único en el sistema
+        builder.Property(c => c.EstaActivo)
+            .IsRequired();
+
+        builder.Property(c => c.FechaAlta)
+            .IsRequired();
+
+        builder.HasOne(c => c.UsuarioAlta)
+            .WithMany()
+            .HasForeignKey(c => c.UsuarioAltaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(c => c.Nombre)
             .IsUnique();
     }

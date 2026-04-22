@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using smartStock.Api.Application.Common.Exceptions.Proveedores;
 using smartStock.Api.Application.Common.Interfaces.Repositories;
 using smartStock.Api.Domain.Models;
@@ -18,6 +19,8 @@ public sealed class AltaProveedorCommandHandler
         AltaProveedorCommand command,
         CancellationToken    cancellationToken)
     {
+        var email = command.Email.ToLowerInvariant();
+
         // FA2: CUIT duplicado
         if (command.Cuit is not null &&
             await _proveedorRepository.CuitExisteAsync(command.Cuit, null, cancellationToken))
@@ -27,7 +30,7 @@ public sealed class AltaProveedorCommandHandler
         if (await _proveedorRepository.NombreExisteAsync(command.Nombre, null, cancellationToken))
             throw new NombreDuplicadoException();
 
-        if (await _proveedorRepository.EmailExisteAsync(command.Email, null, cancellationToken))
+        if (await _proveedorRepository.EmailExisteAsync(email, null, cancellationToken))
             throw new EmailProveedorDuplicadoException();
 
         if (await _proveedorRepository.TelefonoExisteAsync(command.Telefono, null, cancellationToken))
@@ -35,10 +38,11 @@ public sealed class AltaProveedorCommandHandler
 
         var proveedor = new Proveedor
         {
+            Id            = Guid.NewGuid(),
             Nombre        = command.Nombre,
             Cuit          = command.Cuit,
             Telefono      = command.Telefono,
-            Email         = command.Email,
+            Email         = email,
             Direccion     = new Direccion
             {
                 Pais         = command.Direccion.Pais,
@@ -54,7 +58,23 @@ public sealed class AltaProveedorCommandHandler
             UsuarioAltaId = command.UsuarioAltaId
         };
 
-        await _proveedorRepository.CrearAsync(proveedor, cancellationToken);
+        try
+        {
+            await _proveedorRepository.CrearAsync(proveedor, cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            if (await _proveedorRepository.NombreExisteAsync(command.Nombre, null, cancellationToken))
+                throw new NombreDuplicadoException();
+            if (await _proveedorRepository.EmailExisteAsync(email, null, cancellationToken))
+                throw new EmailProveedorDuplicadoException();
+            if (await _proveedorRepository.TelefonoExisteAsync(command.Telefono, null, cancellationToken))
+                throw new TelefonoDuplicadoException();
+            if (command.Cuit is not null &&
+                await _proveedorRepository.CuitExisteAsync(command.Cuit, null, cancellationToken))
+                throw new CuitDuplicadoException();
+            throw;
+        }
 
         return new AltaProveedorResponse(proveedor.Id, proveedor.Nombre, proveedor.Email, proveedor.Cuit);
     }

@@ -30,8 +30,10 @@ public class EmpleadoController : ControllerBase
         [FromBody] EditarPerfilEmpleadoCommand command,
         CancellationToken cancellationToken)
     {
-        var usuarioId = Guid.Parse(User.FindFirstValue("sub")
-                        ?? User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (!Guid.TryParse(
+                User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier),
+                out var usuarioId))
+            return Unauthorized();
 
         var commandConId = command with { UsuarioId = usuarioId };
 
@@ -53,8 +55,10 @@ public class EmpleadoController : ControllerBase
         [FromBody] CambiarContrasenaCommand command,
         CancellationToken cancellationToken)
     {
-        var usuarioId = Guid.Parse(User.FindFirstValue("sub")
-                        ?? User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (!Guid.TryParse(
+                User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier),
+                out var usuarioId))
+            return Unauthorized();
 
         var commandConId = command with { UsuarioId = usuarioId };
 

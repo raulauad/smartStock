@@ -34,6 +34,7 @@ builder.Services.AddScoped<IUsuarioRepository,       UsuarioRepository>();
 builder.Services.AddScoped<IPasswordHasher,          BcryptPasswordHasher>();
 builder.Services.AddScoped<ITokenRevocadoRepository, TokenRevocadoRepository>();
 builder.Services.AddScoped<IProveedorRepository,     ProveedorRepository>();
+builder.Services.AddScoped<ICategoriaRepository,    CategoriaRepository>();
 
 // --- JWT ---
 builder.Services.AddAuthentication(options =>
@@ -59,9 +60,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
-// --- Rate limiting: 5 intentos/minuto por IP en el endpoint de login ---
+// --- Rate limiting ---
 builder.Services.AddRateLimiter(options =>
 {
+    // 5 intentos/minuto por IP en el endpoint de login
     options.AddPolicy("login", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon",
@@ -72,6 +74,19 @@ builder.Services.AddRateLimiter(options =>
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit           = 0
             }));
+
+    // 30 escrituras/minuto por IP en endpoints de mutación de admin
+    options.AddPolicy("admin-escritura", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit          = 30,
+                Window               = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit           = 0
+            }));
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 

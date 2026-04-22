@@ -32,14 +32,12 @@ public sealed class ProveedorRepository : IProveedorRepository
 
     public async Task CrearAsync(Proveedor proveedor, CancellationToken ct = default)
     {
-        proveedor.Id = Guid.NewGuid();
         _db.Proveedores.Add(proveedor);
         await _db.SaveChangesAsync(ct);
     }
 
     public async Task ActualizarAsync(Proveedor proveedor, CancellationToken ct = default)
     {
-        _db.Proveedores.Update(proveedor);
         await _db.SaveChangesAsync(ct);
     }
 }
