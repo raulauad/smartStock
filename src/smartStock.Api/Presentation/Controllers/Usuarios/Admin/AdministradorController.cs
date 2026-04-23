@@ -43,6 +43,7 @@ public class AdministradorController : ControllerBase
     /// CU01-W1: Registra al administrador del sistema (operación única).
     /// </summary>
     [HttpPost("registrar-administrador")]
+    [EnableRateLimiting("login")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -79,6 +80,7 @@ public class AdministradorController : ControllerBase
     /// </summary>
     [HttpPost("alta-empleado")]
     [Authorize(Roles = "Administrador")]
+    [EnableRateLimiting("admin-escritura")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -126,6 +128,7 @@ public class AdministradorController : ControllerBase
     /// </summary>
     [HttpDelete("eliminar-empleado/{id:guid}")]
     [Authorize(Roles = "Administrador")]
+    [EnableRateLimiting("admin-escritura")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -144,6 +147,7 @@ public class AdministradorController : ControllerBase
     /// </summary>
     [HttpPatch("cambiar-estado-empleado/{id:guid}")]
     [Authorize(Roles = "Administrador")]
+    [EnableRateLimiting("admin-escritura")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

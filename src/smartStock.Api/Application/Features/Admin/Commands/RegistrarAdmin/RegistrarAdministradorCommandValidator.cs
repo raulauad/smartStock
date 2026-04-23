@@ -6,9 +6,6 @@ namespace smartStock.Api.Application.Features.Admin.Commands.RegistrarAdmin;
 public sealed class RegistrarAdministradorCommandValidator
     : AbstractValidator<RegistrarAdministradorCommand>
 {
-    private const int DniMinLongitud = 7;
-    private const int DniMaxLongitud = 8;
-
     public RegistrarAdministradorCommandValidator()
     {
         RuleFor(x => x.Nombre)
@@ -29,9 +26,7 @@ public sealed class RegistrarAdministradorCommandValidator
 
         RuleFor(x => x.Dni)
             .NotEmpty().WithMessage("El DNI es requerido.")
-            .Matches(@"^\d+$").WithMessage("El DNI debe contener solo dígitos.")
-            .Length(DniMinLongitud, DniMaxLongitud)
-                .WithMessage($"El DNI debe tener entre {DniMinLongitud} y {DniMaxLongitud} dígitos.");
+            .Matches(@"^\d{7,8}$").WithMessage("El DNI debe contener entre 7 y 8 dígitos numéricos.");
 
         RuleFor(x => x.Contrasena)
             .NotEmpty()         .WithMessage("La contraseña es requerida.")

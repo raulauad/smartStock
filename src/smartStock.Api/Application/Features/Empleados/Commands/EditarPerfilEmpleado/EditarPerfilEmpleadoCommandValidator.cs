@@ -5,9 +5,6 @@ namespace smartStock.Api.Application.Features.Empleados.Commands.EditarPerfilEmp
 
 public sealed class EditarPerfilEmpleadoCommandValidator : AbstractValidator<EditarPerfilEmpleadoCommand>
 {
-    private const int DniMinLongitud = 7;
-    private const int DniMaxLongitud = 8;
-
     public EditarPerfilEmpleadoCommandValidator()
     {
         RuleFor(x => x.Nombre)
@@ -30,9 +27,7 @@ public sealed class EditarPerfilEmpleadoCommandValidator : AbstractValidator<Edi
         // Unicidad delegada al handler (FA1 → 409). Aquí solo formato.
         RuleFor(x => x.Dni)
             .NotEmpty().WithMessage("El DNI es requerido.")
-            .Matches(@"^\d+$").WithMessage("El DNI debe contener solo dígitos.")
-            .Length(DniMinLongitud, DniMaxLongitud)
-                .WithMessage($"El DNI debe tener entre {DniMinLongitud} y {DniMaxLongitud} dígitos.");
+            .Matches(@"^\d{7,8}$").WithMessage("El DNI debe contener entre 7 y 8 dígitos numéricos.");
 
         RuleFor(x => x.Direccion).NotNull().WithMessage("La dirección es requerida.");
 

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using smartStock.Api.Application.Features.Empleados.Commands.CambiarContrasena;
 using smartStock.Api.Application.Features.Empleados.Commands.EditarPerfilEmpleado;
 
@@ -21,6 +22,7 @@ public class EmpleadoController : ControllerBase
     /// El Id se extrae del JWT; no puede ser enviado ni modificado desde el body.
     /// </summary>
     [HttpPut("editar-perfil-empleado")]
+    [EnableRateLimiting("admin-escritura")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -46,6 +48,7 @@ public class EmpleadoController : ControllerBase
     /// El Id se extrae del JWT; no puede ser enviado ni modificado desde el body.
     /// </summary>
     [HttpPatch("cambiar-contrasena")]
+    [EnableRateLimiting("admin-escritura")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

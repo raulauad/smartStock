@@ -418,8 +418,12 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - El app valida que `Jwt:Key` tenga al menos 32 caracteres al arrancar; falla rápido si no
 
 ### Rate limiting
-- Política `"login"`: ventana fija de 1 minuto, máximo 5 requests por IP. Aplicado con `[EnableRateLimiting("login")]` en `POST api/auth/iniciar-sesion`
-- Política `"admin-escritura"`: ventana fija de 1 minuto, máximo 30 requests por IP. Aplicado con `[EnableRateLimiting("admin-escritura")]` en endpoints de mutación del administrador (alta/editar/cambiar-estado de proveedores y categorías)
+- Política `"login"`: ventana fija de 1 minuto, máximo 5 requests por IP. Aplicado en:
+  - `POST api/auth/iniciar-sesion`
+  - `POST api/administrador/registrar-administrador` (endpoint público — protección contra abuso)
+- Política `"admin-escritura"`: ventana fija de 1 minuto, máximo 30 requests por IP. Aplicado en **todos** los endpoints de escritura:
+  - Administrador: alta/editar/cambiar-estado/eliminar de empleados, proveedores, categorías y productos; agregar/editar/eliminar códigos de producto
+  - Empleado: editar-perfil-empleado, cambiar-contrasena
 - Retorna `429 Too Many Requests` al superarse
 - Registrado en `Program.cs` con `AddRateLimiter` + `AddPolicy`
 

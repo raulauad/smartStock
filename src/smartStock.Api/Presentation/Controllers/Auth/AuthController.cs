@@ -49,11 +49,14 @@ public class AuthController : ControllerBase
             ? DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime
             : DateTime.UtcNow;
 
+        if (!Guid.TryParse(subClaim, out var usuarioId))
+            return Unauthorized();
+
         var command = new CerrarSesionCommand
         {
             Jti        = jti,
             Expiracion = expiracion,
-            UsuarioId  = Guid.Parse(subClaim)
+            UsuarioId  = usuarioId
         };
 
         await _mediator.Send(command, cancellationToken);
