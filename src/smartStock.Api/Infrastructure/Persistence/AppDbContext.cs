@@ -10,9 +10,12 @@ public class AppDbContext : DbContext
     public DbSet<Usuario>       Usuarios        { get; set; }
     public DbSet<UsuarioRol>    UsuarioRoles    { get; set; }
     public DbSet<Categoria>     Categorias      { get; set; }
-    public DbSet<Producto>      Productos       { get; set; }
-    public DbSet<Proveedor>     Proveedores     { get; set; }
-    public DbSet<TokenRevocado> TokensRevocados { get; set; }
+    public DbSet<Producto>        Productos        { get; set; }
+    public DbSet<CodigoProducto>  CodigosProducto  { get; set; }
+    public DbSet<StockActual>     StocksActuales   { get; set; }
+    public DbSet<MovimientoStock> MovimientosStock { get; set; }
+    public DbSet<Proveedor>       Proveedores      { get; set; }
+    public DbSet<TokenRevocado>   TokensRevocados  { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

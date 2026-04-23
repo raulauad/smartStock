@@ -1,5 +1,5 @@
 using FluentValidation;
-using System.Net;
+using smartStock.Api.Application.Common.Validators;
 
 namespace smartStock.Api.Application.Features.Empleados.Commands.EditarPerfilEmpleado;
 
@@ -19,7 +19,7 @@ public sealed class EditarPerfilEmpleadoCommandValidator : AbstractValidator<Edi
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("El email es requerido.")
             .EmailAddress().WithMessage("El formato del email no es válido.")
-            .MustAsync(DominioExisteAsync)
+            .MustAsync(EmailDomainValidator.DominioExisteAsync)
                 .WithMessage("La dirección de correo no existe o su dominio no es alcanzable.");
 
         RuleFor(x => x.Telefono)
@@ -61,21 +61,5 @@ public sealed class EditarPerfilEmpleadoCommandValidator : AbstractValidator<Edi
             .NotEmpty().WithMessage("El número de la calle es requerido.")
             .Matches(@"^[0-9a-zA-Z\/\-\s]{1,10}$")
                 .WithMessage("El número debe ser numérico o 'S/N' (máx. 10 caracteres).");
-    }
-
-    private static async Task<bool> DominioExisteAsync(string email, CancellationToken ct)
-    {
-        try
-        {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(3));
-            var dominio     = email.Split('@').Last();
-            var direcciones = await Dns.GetHostAddressesAsync(dominio, cts.Token);
-            return direcciones.Length > 0;
-        }
-        catch
-        {
-            return false;
-        }
     }
 }

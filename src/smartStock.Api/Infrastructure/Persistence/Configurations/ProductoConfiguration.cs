@@ -18,9 +18,26 @@ public sealed class ProductoConfiguration : IEntityTypeConfiguration<Producto>
             .HasMaxLength(500);
 
         builder.Property(p => p.PrecioCosto)
-            .HasColumnType("decimal(12,2)");
+            .HasColumnType("decimal(12,2)")
+            .IsRequired();
 
         builder.Property(p => p.PrecioVenta)
-            .HasColumnType("decimal(12,2)");
+            .HasColumnType("decimal(12,2)")
+            .IsRequired();
+
+        builder.Property(p => p.StockMinimo)
+            .HasColumnType("decimal(12,2)")
+            .IsRequired();
+
+        builder.Property(p => p.UnidadMedida)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.Property(p => p.EstaActivo)
+            .IsRequired();
+
+        builder.Property(p => p.FechaAlta)
+            .IsRequired();
     }
 }

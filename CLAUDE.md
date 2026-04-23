@@ -51,19 +51,27 @@ smartStock/                              <- raiz del repositorio
     |   |   |   +-- AltaEmpleado/
     |   |   |   +-- AltaProveedor/
     |   |   |   +-- AltaCategoria/
+    |   |   |   +-- AltaProducto/
     |   |   |   +-- CambiarEstadoEmpleado/
     |   |   |   +-- CambiarEstadoProveedor/
     |   |   |   +-- CambiarEstadoCategoria/
+    |   |   |   +-- CambiarEstadoProducto/
     |   |   |   +-- EditarProveedor/
     |   |   |   +-- EditarCategoria/
+    |   |   |   +-- EditarProducto/
+    |   |   |   +-- AgregarCodigoProducto/
+    |   |   |   +-- EditarCodigoProducto/
     |   |   |   +-- RegistrarAdmin/
     |   |   |   +-- ObtenerDetalleEmpleado/
     |   |   |   +-- ObtenerDetalleProveedor/
     |   |   |   +-- ObtenerDetalleCategoria/
+    |   |   |   +-- ObtenerDetalleProducto/
     |   |   |   +-- ObtenerListaEmpleados/
     |   |   |   +-- ObtenerListaProveedores/
     |   |   |   +-- ObtenerListaCategorias/
+    |   |   |   +-- ObtenerListaProductos/
     |   |   |   +-- ObtenerPerfilAdmin/
+    |   |   |   +-- Productos/            <- sub-DTOs compartidos del módulo Productos (CodigoProductoResponse)
     |   |   +-- Auth/                    <- DTOs de features de Auth
     |   |   |   +-- IniciarSesion/
     |   |   +-- Empleados/               <- DTOs de features del actor Empleado
@@ -102,15 +110,19 @@ src/smartStock.Api/
 |       |   +-- Categorias/  -> CategoriaNoEncontradaException, CategoriaNombreDuplicadoException,
 |       |   |                   EstadoCategoriaSinCambioException, SinCategoriasActivasAlternativasException,
 |       |   |                   CategoriaDestinoInvalidaException, CategoriaReasignacionRequiereDestinoException
+|       |   +-- Productos/   -> ProductoNoEncontradoException, CodigoDuplicadoException,
+|       |   |                   EstadoProductoSinCambioException, UnidadMedidaConStockException,
+|       |   |                   CodigoUnicoRequeridoException, CodigoNoEncontradoException,
+|       |   |                   NombreSimilarProductoException, PrecioVentaMenorCostoException
 |       |   +-- Usuarios/    -> DniDuplicadoException, EmailDuplicadoException,
 |       |                       EstadoUsuarioSinCambioException, UsuarioNoEncontradoException
 |       +-- Interfaces/  -> IJwtTokenService, IExceptionHandler, IPasswordHasher, IUsuarioRepository,
-|       |                   ITokenRevocadoRepository, IProveedorRepository, ICategoriaRepository
+|       |                   ITokenRevocadoRepository, IProveedorRepository, ICategoriaRepository, IProductoRepository
 |       +-- Middleware/  -> GlobalExceptionHandler, VerificarUsuarioActivoMiddleware
 |       +-- Validators/  -> EmailDomainValidator (DNS check compartido)
 +-- Infrastructure/
 |   +-- Persistence/     -> AppDbContext, EF Configurations, Migrations
-|   |   +-- Repositories/ -> UsuarioRepository, TokenRevocadoRepository, ProveedorRepository, CategoriaRepository
+|   |   +-- Repositories/ -> UsuarioRepository, TokenRevocadoRepository, ProveedorRepository, CategoriaRepository, ProductoRepository
 |   +-- Services/        -> JwtTokenService, BcryptPasswordHasher
 +-- Presentation/
     +-- Controllers/
@@ -131,9 +143,10 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 | `UsuarioRol` | Tabla puente usuario-rol (custom, no Identity). Índice único filtrado para Administrador |
 | `Direccion` | Owned Entity compartida por Usuario y Proveedor. Campos: Pais, Provincia, Localidad, CodigoPostal, Calle, Numero |
 | `Categoria` | PK Guid. Nombre único (max 50), Descripcion nullable (max 250), EstaActivo, FechaAlta, UsuarioAltaId (FK a Usuario) |
-| `Producto` | PK Guid. Nombre, Descripcion, PrecioCosto, PrecioVenta, CategoriaId (FK), UsuarioAltaId (FK). 1:1 con StockActual |
-| `StockActual` | PK = ProductoId (1:1 con Producto). Cantidad decimal |
-| `MovimientoStock` | Tipo enum (Compra/Venta/Ajuste). FK a Producto, Usuario, opcionales a ItemDetalleVenta/ItemDetalleCompra |
+| `Producto` | PK Guid. Nombre (max 100), Descripcion nullable (max 500), PrecioCosto, PrecioVenta, UnidadMedida (enum), StockMinimo, EstaActivo, FechaAlta, CategoriaId (FK), UsuarioAltaId (FK). 1:1 con StockActual. Colección: Codigos, Movimientos |
+| `CodigoProducto` | PK Guid. Codigo (max 50, único en todo el sistema — índice UX_CodigosProducto_Codigo), Tipo (enum: Barras/Interno), Factor (decimal), Descripcion nullable (max 50). FK a Producto |
+| `StockActual` | PK = ProductoId (1:1 con Producto). Cantidad decimal, UltimaActualizacion |
+| `MovimientoStock` | Tipo enum (Compra/Venta/Ajuste/AltaInicial). FK a Producto, Usuario, opcionales a ItemDetalleVenta/ItemDetalleCompra |
 | `VentaDia` / `CompraDia` | Agrupan detalles de una jornada. Total acumulado, Estado: Abierto/Cerrado |
 | `DetalleVenta` / `DetalleCompra` | Transacción individual (ticket) dentro de VentaDia/CompraDia |
 | `ItemDetalleVenta` | Snapshot: PrecioVenta, PrecioCosto, Subtotal, GananciaTotal |
@@ -142,7 +155,7 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 | `Proveedor` | PK Guid. Nombre, Cuit (nullable, CHAR 11), Telefono, Email, Direccion (owned), Observaciones (nullable), EstaActivo, FechaAlta. FK a UsuarioAlta |
 | `TokenRevocado` | Almacena JTIs de tokens revocados (logout) |
 
-**Enums:** `TipoMovimiento` (Compra, Venta, Ajuste), `EstadoCierre` (Abierto, Cerrado) y `EstadoUsuario` (Suspendido, Activo, Conectado — `Conectado` reservado para SignalR).
+**Enums:** `TipoMovimiento` (Compra, Venta, Ajuste, AltaInicial), `EstadoCierre` (Abierto, Cerrado), `EstadoUsuario` (Suspendido, Activo, Conectado — `Conectado` reservado para SignalR), `TipoCodigo` (Barras, Interno), `UnidadMedida` (Unidad, Kilogramo, Gramo, Litro, Mililitro).
 
 ---
 
@@ -200,6 +213,21 @@ Cada carpeta de feature contiene:
 
 ---
 
+***CU04: Gestión De Productos**
+*COMMANDS:*
+`AltaProducto` — CU04-W1: alta de producto en estado activo. `UsuarioAltaId` del claim `sub`. Campos: Nombre (2-100 chars, comienza con mayúscula), CategoriaId (activa), UnidadMedida, PrecioCosto, PrecioVenta, StockInicial (default 0), StockMinimo, Codigos (opcional). Si no se proveen códigos, el sistema autogenera uno interno (`PROD-00001`). Validaciones de advertencia: FA3 → lanza `PrecioVentaMenorCostoException` (422) si PrecioVenta < PrecioCosto y `confirmarPrecioVentaMenorCosto = false`; FA4 → lanza `NombreSimilarProductoException` (409) si existe producto activo con el mismo nombre (case-insensitive) y `confirmarNombreSimilar = false`. FA2 → lanza `CodigoDuplicadoException` (409) si algún código ya existe. Si StockInicial > 0 crea un `MovimientoStock(AltaInicial)`. Endpoint: `POST api/administrador/alta-producto`.
+`EditarProducto` — CU04-W2: edita Nombre, CategoriaId, UnidadMedida, PrecioCosto, PrecioVenta, StockMinimo. FA3 → lanza `UnidadMedidaConStockException` (422) si se cambia la unidad con stock != 0. Mismas advertencias FA2/FA4. `ProductoId` de la ruta. Endpoint: `PUT api/administrador/editar-producto/{id:guid}`.
+`CambiarEstadoProducto` — CU04-W3: activa o desactiva producto. `ProductoId` de la ruta. Body: `{ estaActivo: bool }`. Lanza `EstadoProductoSinCambioException` (409). Respuesta incluye `StockActual` para que el cliente pueda mostrar advertencia de stock si corresponde. Sin validator. Endpoint: `PATCH api/administrador/cambiar-estado-producto/{id:guid}`.
+`AgregarCodigoProducto` — CU04-W4 (agregar): agrega un código a un producto existente. `ProductoId` de la ruta. Lanza `CodigoDuplicadoException` (409). Endpoint: `POST api/administrador/agregar-codigo-producto/{id:guid}`.
+`EditarCodigoProducto` — CU04-W4 (editar): edita Factor y Descripcion de un código. Código y Tipo no son editables. `ProductoId` y `CodigoId` de la ruta. Lanza `CodigoNoEncontradoException` (404). Endpoint: `PATCH api/administrador/editar-codigo-producto/{id:guid}/{codigoId:guid}`.
+`EliminarCodigoProducto` — CU04-W4 (eliminar): elimina un código de un producto. Lanza `CodigoUnicoRequeridoException` (409) si es el último. Sin body ni response (204). Endpoint: `DELETE api/administrador/eliminar-codigo-producto/{id:guid}/{codigoId:guid}`.
+
+*QUERIES:*
+`ObtenerListaProductos` — CU04-R1: filtros `filtroEstado` (activo/inactivo), `filtroCategoria` (Guid?), `alertaStockBajo` (bool?), `busqueda` (Nombre o Código). Incluye campo `AlertaStockBajo = Stock.Cantidad <= StockMinimo`. Endpoint: `GET api/administrador/obtener-lista-productos?filtroEstado=&filtroCategoria=&alertaStockBajo=&busqueda=`.
+`ObtenerDetalleProducto` — CU04-R2: detalle completo con categoría, admin que lo creó y lista de códigos. Lanza `ProductoNoEncontradoException` (404). Endpoint: `GET api/administrador/obtener-detalle-producto/{id:guid}`.
+
+---
+
 ## Convenciones de código
 
 ### Naming
@@ -227,6 +255,10 @@ Cada carpeta de feature contiene:
 - La validación DNS del email se centraliza en `Application/Common/Validators/EmailDomainValidator.DominioExisteAsync` (static, timeout 3s). Llamar con `.MustAsync(EmailDomainValidator.DominioExisteAsync)` — no duplicar el método en cada validator
 - **DNI:** 7 u 8 dígitos numéricos (`^\d{7,8}$`). Regla uniforme para Administrador y Empleado
 - **Nombre de categoría:** debe comenzar con letra mayúscula Unicode (`^[\p{Lu}]`), entre 2 y 50 caracteres
+- **Nombre de producto:** debe comenzar con letra mayúscula Unicode (`^[\p{Lu}]`), entre 2 y 100 caracteres
+- **Código de producto:** alfanumérico + guiones/guiones bajos (`^[a-zA-Z0-9\-_]+$`), entre 1 y 50 caracteres, único en todo el sistema
+- **Factor de código:** mayor a cero. Los enums `TipoCodigo` y `UnidadMedida` se reciben como string en el body JSON (configurado vía `JsonStringEnumConverter` global en `AddControllers`)
+- **Advertencias con confirmación (patrón FA3/FA4):** los commands `AltaProducto` y `EditarProducto` aceptan flags `confirmarPrecioVentaMenorCosto: bool` y `confirmarNombreSimilar: bool`. Si la condición se activa y el flag es false, se lanza la excepción correspondiente. El cliente reenvía con el flag en true para confirmar
 
 ### Controllers
 - Heredan de `ControllerBase`
@@ -261,7 +293,7 @@ git rm --cached src/smartStock.Api/appsettings.Development.json
 - Motor: **SQL Server**
 - Connection string en `appsettings.json` → clave `DefaultConnection`
 - `AppDbContext` extiende `DbContext` (NO IdentityDbContext — la gestión de usuarios y roles es completamente custom)
-- DbSets activos: `Usuarios`, `UsuarioRoles`, `Categorias`, `Productos`, `Proveedores`, `TokensRevocados`
+- DbSets activos: `Usuarios`, `UsuarioRoles`, `Categorias`, `Productos`, `CodigosProducto`, `StocksActuales`, `MovimientosStock`, `Proveedores`, `TokensRevocados`
 - Configuraciones EF aplicadas con `builder.ApplyConfigurationsFromAssembly(...)`
 
 ---
@@ -299,6 +331,14 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 | `SinCategoriasActivasAlternativasException` | 409 | No hay otras categorías activas para reasignar productos (FA3 de CU03-W3) |
 | `CategoriaDestinoInvalidaException` | 422 | La categoría destino no existe, está inactiva o es la misma fuente |
 | `CategoriaReasignacionRequiereDestinoException` | 422 | La categoría tiene productos pero no se indicó destino de reasignación |
+| `ProductoNoEncontradoException` | 404 | No se encontró el producto solicitado |
+| `CodigoDuplicadoException` | 409 | El código ya está registrado en el sistema asociado a otro producto |
+| `EstadoProductoSinCambioException` | 409 | Se intenta activar/desactivar un producto que ya tiene ese estado |
+| `UnidadMedidaConStockException` | 422 | Se intenta cambiar la unidad de medida de un producto con stock != 0 |
+| `CodigoUnicoRequeridoException` | 409 | Se intenta eliminar el último código de un producto |
+| `CodigoNoEncontradoException` | 404 | No se encontró el código solicitado para ese producto |
+| `NombreSimilarProductoException` | 409 | Nombre coincide case-insensitive con producto activo y `confirmarNombreSimilar = false` |
+| `PrecioVentaMenorCostoException` | 422 | Precio de venta menor al costo y `confirmarPrecioVentaMenorCosto = false` |
 
 ---
 
@@ -306,10 +346,10 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 
 ### Implementado ✅
 - Dominio completo (todos los modelos definidos; `Direccion` como Owned Entity compartida por Usuario y Proveedor)
-- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`, `ProductoConfiguration`, `MovimientoStockConfiguration`, `CierreCajaConfiguration`, `CompraDiaConfiguration`, `VentaDiaConfiguration`, `ItemDetalleCompraConfiguration`, `ItemDetalleVentaConfiguration`, `ProveedorConfiguration`
-- Migraciones aplicadas: `InitialCreate`, `DireccionComoOwned`, `UniqueAdminRole`, `BorradoLogicoEmpleado`, `CU03_GestionCategorias` (incluye renombrado tabla `Producto` → `Productos` y nuevos campos en `Categorias`)
+- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`, `ProductoConfiguration`, `CodigoProductoConfiguration`, `MovimientoStockConfiguration`, `CierreCajaConfiguration`, `CompraDiaConfiguration`, `VentaDiaConfiguration`, `ItemDetalleCompraConfiguration`, `ItemDetalleVentaConfiguration`, `ProveedorConfiguration`
+- Migraciones aplicadas: `InitialCreate`, `DireccionComoOwned`, `UniqueAdminRole`, `BorradoLogicoEmpleado`, `CU03_GestionCategorias`, `CU04_GestionProductos` (agrega tabla `CodigosProducto`, índice único `UX_CodigosProducto_Codigo`, campos nuevos en `Productos`: UnidadMedida, StockMinimo, EstaActivo, FechaAlta; agrega DbSets para StockActual y MovimientoStock; TipoMovimiento agrega AltaInicial)
 - `IJwtTokenService` + `JwtTokenService`, `IPasswordHasher` + `BcryptPasswordHasher`
-- **Repositorios:** `IUsuarioRepository` / `UsuarioRepository`, `ITokenRevocadoRepository` / `TokenRevocadoRepository`, `IProveedorRepository` / `ProveedorRepository`, `ICategoriaRepository` / `CategoriaRepository`
+- **Repositorios:** `IUsuarioRepository` / `UsuarioRepository`, `ITokenRevocadoRepository` / `TokenRevocadoRepository`, `IProveedorRepository` / `ProveedorRepository`, `ICategoriaRepository` / `CategoriaRepository`, `IProductoRepository` / `ProductoRepository`
 - **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registrar-administrador`
 - **CU01-W2:** `IniciarSesion` → `POST api/auth/iniciar-sesion` (retorna JWT con claims: sub, email, nombre, roles)
 - **CU01-W3:** `AltaEmpleado` → `POST api/administrador/alta-empleado`
@@ -330,11 +370,19 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - **CU03-W3:** `CambiarEstadoCategoria` → `PATCH api/administrador/cambiar-estado-categoria/{id:guid}` (con reasignación automática de productos si `estaActivo=false` y hay productos; requiere `categoriaDestinoId`)
 - **CU03-R1:** `ObtenerListaCategorias` → `GET api/administrador/obtener-lista-categorias?filtroEstado=&busqueda=`
 - **CU03-R2:** `ObtenerDetalleCategoria` → `GET api/administrador/obtener-detalle-categoria/{id:guid}`
+- **CU04-W1:** `AltaProducto` → `POST api/administrador/alta-producto` (con autogeneración de código interno si no se proveen códigos)
+- **CU04-W2:** `EditarProducto` → `PUT api/administrador/editar-producto/{id:guid}`
+- **CU04-W3:** `CambiarEstadoProducto` → `PATCH api/administrador/cambiar-estado-producto/{id:guid}`
+- **CU04-W4 (agregar):** `AgregarCodigoProducto` → `POST api/administrador/agregar-codigo-producto/{id:guid}`
+- **CU04-W4 (editar):** `EditarCodigoProducto` → `PATCH api/administrador/editar-codigo-producto/{id:guid}/{codigoId:guid}`
+- **CU04-W4 (eliminar):** `EliminarCodigoProducto` → `DELETE api/administrador/eliminar-codigo-producto/{id:guid}/{codigoId:guid}` (204 No Content)
+- **CU04-R1:** `ObtenerListaProductos` → `GET api/administrador/obtener-lista-productos?filtroEstado=&filtroCategoria=&alertaStockBajo=&busqueda=`
+- **CU04-R2:** `ObtenerDetalleProducto` → `GET api/administrador/obtener-detalle-producto/{id:guid}`
 - Roles: `"Administrador"`, `"Empleado"`
-- **Seguridad:** rate limiting con políticas `"login"` (5 req/min) y `"admin-escritura"` (30 req/min), `VerificarUsuarioActivoMiddleware`, validación JWT key al arrancar, DNS timeout 3s centralizado, índice único filtrado Administrador, índice único filtrado CUIT Proveedor
+- **Seguridad:** rate limiting con políticas `"login"` (5 req/min) y `"admin-escritura"` (30 req/min), `VerificarUsuarioActivoMiddleware`, validación JWT key al arrancar, DNS timeout 3s centralizado, índice único filtrado Administrador, índice único filtrado CUIT Proveedor, índice único `UX_CodigosProducto_Codigo`
+- **JSON:** `JsonStringEnumConverter` configurado globalmente en `AddControllers` — los enums se reciben y serializan como strings en todas las respuestas y bodies
 
 ### Pendiente ⏳
-- CRUD de Productos (CU04)
 - Features de VentaDia/CompraDia, DetalleVenta/DetalleCompra, MovimientoStock, CierreCaja
 
 ---
@@ -353,6 +401,11 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - No usar `Guid.Parse(...)!` para extraer el claim `sub` → usar `Guid.TryParse(...)` y retornar 401 si falla
 - No guardar emails de proveedores con capitalización original → normalizar con `.ToLowerInvariant()` en el handler antes de persistir y comparar
 - No desactivar una categoría con productos sin proveer `categoriaDestinoId` → el handler lo valida con `CategoriaReasignacionRequiereDestinoException` (422)
+- No permitir cambiar la unidad de medida de un producto con stock != 0 → el handler lanza `UnidadMedidaConStockException` (422)
+- No eliminar el último código de un producto → el handler lanza `CodigoUnicoRequeridoException` (409)
+- No leer `CodigoProducto.Codigo` o `Tipo` como editables en `EditarCodigoProducto` → solo `Factor` y `Descripcion` son modificables; para cambiar código o tipo, eliminar y agregar uno nuevo
+- No usar enums como enteros en el body JSON → `JsonStringEnumConverter` global, siempre strings (`"Barras"`, `"Interno"`, `"Unidad"`, etc.)
+- No reutilizar `CodigoProductoResponse` definido en otro namespace — el sub-DTO compartido está en `smartStock.Shared.Dtos.Admin.Productos`
 
 ---
 

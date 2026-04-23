@@ -34,7 +34,8 @@ builder.Services.AddScoped<IUsuarioRepository,       UsuarioRepository>();
 builder.Services.AddScoped<IPasswordHasher,          BcryptPasswordHasher>();
 builder.Services.AddScoped<ITokenRevocadoRepository, TokenRevocadoRepository>();
 builder.Services.AddScoped<IProveedorRepository,     ProveedorRepository>();
-builder.Services.AddScoped<ICategoriaRepository,    CategoriaRepository>();
+builder.Services.AddScoped<ICategoriaRepository,     CategoriaRepository>();
+builder.Services.AddScoped<IProductoRepository,      ProductoRepository>();
 
 // --- JWT ---
 builder.Services.AddAuthentication(options =>
@@ -107,7 +108,9 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // --- Controllers + OpenAPI ---
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+        o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((doc, _, _) =>

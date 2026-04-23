@@ -4,5 +4,6 @@ public enum TipoMovimiento
 {
     Compra,
     Venta,
-    Ajuste
+    Ajuste,
+    AltaInicial
 }
