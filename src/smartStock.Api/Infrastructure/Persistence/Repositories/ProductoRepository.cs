@@ -79,4 +79,10 @@ public sealed class ProductoRepository : IProductoRepository
         _db.CodigosProducto.Remove(codigo);
         await _db.SaveChangesAsync(ct);
     }
+
+    public async Task AjustarStockAsync(MovimientoStock movimiento, CancellationToken ct = default)
+    {
+        _db.MovimientosStock.Add(movimiento);
+        await _db.SaveChangesAsync(ct);
+    }
 }

@@ -5,5 +5,6 @@ public enum TipoMovimiento
     Compra,
     Venta,
     Ajuste,
-    AltaInicial
+    AltaInicial,
+    Anulacion
 }

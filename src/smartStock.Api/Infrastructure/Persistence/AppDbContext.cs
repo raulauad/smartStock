@@ -17,6 +17,14 @@ public class AppDbContext : DbContext
     public DbSet<Proveedor>       Proveedores      { get; set; }
     public DbSet<TokenRevocado>   TokensRevocados  { get; set; }
 
+    public DbSet<CompraDia>          ComprasDia        { get; set; }
+    public DbSet<DetalleCompra>      DetallesCompra    { get; set; }
+    public DbSet<ItemDetalleCompra>  ItemsDetalleCompra { get; set; }
+    public DbSet<VentaDia>           VentasDia         { get; set; }
+    public DbSet<DetalleVenta>       DetallesVenta     { get; set; }
+    public DbSet<ItemDetalleVenta>   ItemsDetalleVenta { get; set; }
+    public DbSet<CierreCaja>         CierresCaja       { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

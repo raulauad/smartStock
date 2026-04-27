@@ -77,6 +77,14 @@ smartStock/                              <- raiz del repositorio
     |   |   +-- Empleados/               <- DTOs de features del actor Empleado
     |   |   |   +-- CambiarContrasena/
     |   |   |   +-- EditarPerfilEmpleado/
+    |   |   +-- Compras/                 <- DTOs de features del módulo Compras
+    |   |   |   +-- RegistrarCompra/
+    |   |   |   +-- AnularCompra/
+    |   |   |   +-- AjusteManualStock/
+    |   |   |   +-- ObtenerListaCompras/
+    |   |   |   +-- ObtenerDetalleCompra/
+    |   |   |   +-- ObtenerSesionDiariaCompras/
+    |   |   |   +-- ObtenerAjustesStock/
     |   |   +-- Shared/                  <- DTOs transversales (DireccionDto)
     |   +-- Contracts/                   <- (FUTURO) interfaces y contratos publicos
     |
@@ -115,21 +123,28 @@ src/smartStock.Api/
 |       |   |                   CodigoUnicoRequeridoException, CodigoNoEncontradoException,
 |       |   |                   NombreSimilarProductoException, PrecioVentaMenorCostoException
 |       |   +-- Usuarios/    -> DniDuplicadoException, EmailDuplicadoException,
-|       |                       EstadoUsuarioSinCambioException, UsuarioNoEncontradoException
+|       |   |                   EstadoUsuarioSinCambioException, UsuarioNoEncontradoException
+|       |   +-- Compras/     -> SesionDiariaCerradaException, CompraNoEncontradaException,
+|       |                       CompraYaAnuladaException, StockInsuficienteParaAnulacionException,
+|       |                       StockInsuficienteParaDecremento, FechaCompraRetroactivaException,
+|       |                       ComprobanteDuplicadoException
 |       +-- Interfaces/  -> IJwtTokenService, IExceptionHandler, IPasswordHasher, IUsuarioRepository,
-|       |                   ITokenRevocadoRepository, IProveedorRepository, ICategoriaRepository, IProductoRepository
+|       |                   ITokenRevocadoRepository, IProveedorRepository, ICategoriaRepository,
+|       |                   IProductoRepository, ICompraRepository
 |       +-- Middleware/  -> GlobalExceptionHandler, VerificarUsuarioActivoMiddleware
 |       +-- Validators/  -> EmailDomainValidator (DNS check compartido)
 +-- Infrastructure/
 |   +-- Persistence/     -> AppDbContext, EF Configurations, Migrations
-|   |   +-- Repositories/ -> UsuarioRepository, TokenRevocadoRepository, ProveedorRepository, CategoriaRepository, ProductoRepository
+|   |   +-- Repositories/ -> UsuarioRepository, TokenRevocadoRepository, ProveedorRepository,
+|   |                        CategoriaRepository, ProductoRepository, CompraRepository
 |   +-- Services/        -> JwtTokenService, BcryptPasswordHasher
 +-- Presentation/
     +-- Controllers/
         +-- Auth/        -> AuthController (api/auth)
         +-- Usuarios/
-            +-- Admin/    -> AdministradorController (api/administrador)
-            +-- Empleado/ -> EmpleadoController (api/empleado)
+        |   +-- Admin/    -> AdministradorController (api/administrador)
+        |   +-- Empleado/ -> EmpleadoController (api/empleado)
+        +-- Compras/      -> ComprasController (api/compras)
 ```
 
 ---
@@ -146,16 +161,23 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 | `Producto` | PK Guid. Nombre (max 100), Descripcion nullable (max 500), PrecioCosto, PrecioVenta, UnidadMedida (enum), StockMinimo, EstaActivo, FechaAlta, CategoriaId (FK), UsuarioAltaId (FK). 1:1 con StockActual. Colección: Codigos, Movimientos |
 | `CodigoProducto` | PK Guid. Codigo (max 50, único en todo el sistema — índice UX_CodigosProducto_Codigo), Tipo (enum: Barras/Interno), Factor (decimal), Descripcion nullable (max 50). FK a Producto |
 | `StockActual` | PK = ProductoId (1:1 con Producto). Cantidad decimal, UltimaActualizacion |
-| `MovimientoStock` | Tipo enum (Compra/Venta/Ajuste/AltaInicial). FK a Producto, Usuario, opcionales a ItemDetalleVenta/ItemDetalleCompra |
-| `VentaDia` / `CompraDia` | Agrupan detalles de una jornada. Total acumulado, Estado: Abierto/Cerrado |
-| `DetalleVenta` / `DetalleCompra` | Transacción individual (ticket) dentro de VentaDia/CompraDia |
-| `ItemDetalleVenta` | Snapshot: PrecioVenta, PrecioCosto, Subtotal, GananciaTotal |
-| `ItemDetalleCompra` | Snapshot: PrecioCompra, Subtotal |
+| `MovimientoStock` | Tipo enum (Compra/Venta/Ajuste/AltaInicial/Anulacion). FK a Producto, Usuario. Observacion nullable (max 500). FK opcional a ItemDetalleVenta (1:0..1), FK opcional a ItemDetalleCompra (muchos por item — uno original Compra + uno compensatorio Anulacion) |
+| `CompraDia` | Sesión diaria global (una por fecha, **no** por proveedor). PK int. FechaSesion (unique), Total acumulado de compras vigentes, Estado: Abierto/Cerrado, UsuarioId (FK — quien creó la sesión). Colección: Detalles |
+| `DetalleCompra` | Transacción individual dentro de CompraDia. PK int. ProveedorId (FK), UsuarioId (FK), FechaHora, FechaCompra (date), Total, NumeroComprobante (nullable), TipoComprobante (enum nullable), FechaComprobante (nullable), EstaAnulada, FechaAnulacion (nullable), MotivoAnulacion (nullable), UsuarioAnulaId (nullable FK). Índice único filtrado `UX_DetallesCompra_Comprobante` sobre (ProveedorId, NumeroComprobante, TipoComprobante) excluyendo anuladas |
+| `ItemDetalleCompra` | Ítem de una DetalleCompra. PK int. Snapshot: NombreProducto, PrecioCompra, Subtotal, Factor (nullable). FK a Producto, FK opcional a CodigoProducto. Colección: Movimientos (1:many — movimiento original Compra + compensatorio Anulacion) |
+| `VentaDia` / `DetalleVenta` / `ItemDetalleVenta` | Equivalentes para ventas (aún no implementados en features) |
 | `CierreCaja` | 1:1 con VentaDia y CompraDia |
-| `Proveedor` | PK Guid. Nombre, Cuit (nullable, CHAR 11), Telefono, Email, Direccion (owned), Observaciones (nullable), EstaActivo, FechaAlta. FK a UsuarioAlta |
+| `Proveedor` | PK Guid. Nombre, Cuit (nullable, CHAR 11), Telefono, Email, Direccion (owned), Observaciones (nullable), EstaActivo, FechaAlta. FK a UsuarioAlta. Colección: Detalles (DetalleCompra) |
 | `TokenRevocado` | Almacena JTIs de tokens revocados (logout) |
 
-**Enums:** `TipoMovimiento` (Compra, Venta, Ajuste, AltaInicial), `EstadoCierre` (Abierto, Cerrado), `EstadoUsuario` (Suspendido, Activo, Conectado — `Conectado` reservado para SignalR), `TipoCodigo` (Barras, Interno), `UnidadMedida` (Unidad, Kilogramo, Gramo, Litro, Mililitro).
+**Enums:**
+- `TipoMovimiento` (Compra, Venta, Ajuste, AltaInicial, **Anulacion**)
+- `EstadoCierre` (Abierto, Cerrado)
+- `EstadoUsuario` (Suspendido, Activo, Conectado — `Conectado` reservado para SignalR)
+- `TipoCodigo` (Barras, Interno)
+- `UnidadMedida` (Unidad, Kilogramo, Gramo, Litro, Mililitro)
+- `TipoComprobante` (FacturaA, FacturaB, FacturaC, FacturaX, Remito, Otro)
+- `TipoAjuste` (Incremento, Decremento)
 
 ---
 
@@ -228,6 +250,28 @@ Cada carpeta de feature contiene:
 
 ---
 
+***CU05: Gestión De Compras**
+Controller: `ComprasController` → `[Route("api/compras")]`, `[Authorize]` a nivel de clase.
+
+*COMMANDS:*
+`RegistrarCompra` — CU05-W1: registra una compra. Crea la sesión `CompraDia` del día si no existe; reutiliza la existente si está abierta. `UsuarioId` del claim `sub`. Campos: ProveedorId (activo), FechaCompra, Items (ProductoId, CodigoProductoId?, Cantidad, PrecioCompra, ActualizarPrecioCosto), NumeroComprobante?, TipoComprobante?, FechaComprobante?, ConfirmarFechaRetroactiva. FA5: si `FechaCompra.Date < hoy` y `ConfirmarFechaRetroactiva = false` → `FechaCompraRetroactivaException` (409). FA4: si NumeroComprobante + TipoComprobante provistos y ya existe comprobante vigente del mismo proveedor → `ComprobanteDuplicadoException` (409). NumeroComprobante y TipoComprobante son co-dependientes (si uno está, el otro es requerido). Si `ActualizarPrecioCosto = true` actualiza `Producto.PrecioCosto`. Crea `MovimientoStock(Tipo=Compra)` por ítem. El stock se actualiza en la misma transacción vía EF tracked entities + single SaveChanges en `RegistrarCompraAsync`. Endpoint: `POST api/compras/registrar-compra`.
+`AnularCompra` — CU05-W2: anula una compra vigente dentro de una sesión abierta. Solo `[Authorize(Roles = "Administrador")]`. `CompraId` de la ruta, `UsuarioId` del claim `sub`. Campos: MotivoAnulacion. FA1: sesión cerrada → `SesionDiariaCerradaException` (409). FA3: ya anulada → `CompraYaAnuladaException` (409). FA2: valida stock suficiente acumulando cantidad por producto (un mismo producto puede aparecer en múltiples ítems de la misma compra) → `StockInsuficienteParaAnulacionException` (409). Crea `MovimientoStock(Tipo=Anulacion, Cantidad negativa)` por ítem, asociado al ItemDetalleCompra. Descuenta el Total de la sesión. Endpoint: `PATCH api/compras/anular-compra/{id:int}`.
+`AjusteManualStock` — CU05-W3: ajuste manual de stock. Solo `[Authorize(Roles = "Administrador")]`. `UsuarioId` del claim `sub`. Campos: ProductoId (activo), TipoAjuste (Incremento/Decremento), Cantidad (> 0), Motivo (5-250 chars). FA2: Decremento con cantidad > stockActual → `StockInsuficienteParaDecremento` (409). Crea `MovimientoStock(Tipo=Ajuste, Observacion=Motivo)`. Endpoint: `POST api/compras/ajuste-manual-stock`.
+
+*QUERIES:*
+`ObtenerListaCompras` — CU05-R1: listado con filtros opcionales: `fechaDesde`, `fechaHasta`, `proveedorId`, `usuarioRegistroId`, `filtroEstado` (`"vigente"`/`"anulada"`), `numeroComprobante`. Endpoint: `GET api/compras/obtener-lista-compras`.
+`ObtenerDetalleCompra` — CU05-R2: detalle completo de una compra (proveedor, usuario, sesión, ítems con código). Endpoint: `GET api/compras/obtener-detalle-compra/{id:int}`.
+`ObtenerSesionDiariaCompras` — CU05-R3: sesión diaria. Sin parámetro devuelve la del día actual. Retorna `null` → Controller responde 404 si no existe. Incluye resumen de compras vigentes y anuladas, totales. Endpoint: `GET api/compras/obtener-sesion-diaria-compras?fecha=`.
+`ObtenerAjustesStock` — CU05-R4: historial de ajustes y movimientos de anulación. Solo `[Authorize(Roles = "Administrador")]`. Filtros: `fechaDesde`, `fechaHasta`, `productoId`, `usuarioId`, `filtroTipo` (`"ajuste"`/`"anulacion"`). Endpoint: `GET api/compras/obtener-ajustes-stock`.
+
+**Diseño clave de CU05:**
+- `CompraDia` es una sesión diaria **global** (una por fecha, no por proveedor). `ProveedorId` vive en `DetalleCompra`.
+- `ItemDetalleCompra.Movimientos` es `ICollection<MovimientoStock>` (1:many) para soportar el movimiento original (Compra) y el compensatorio (Anulacion) en el mismo item.
+- La atomicidad se logra por el DbContext scoped compartido entre repositorios: handler modifica entidades tracked, llama a `RegistrarCompraAsync` o `GuardarCambiosAsync` que hace un único `SaveChangesAsync`.
+- El índice único filtrado `UX_DetallesCompra_Comprobante` sobre (ProveedorId, NumeroComprobante, TipoComprobante) excluye filas anuladas (`[EstaAnulada] = 0`).
+
+---
+
 ## Convenciones de código
 
 ### Naming
@@ -259,6 +303,7 @@ Cada carpeta de feature contiene:
 - **Código de producto:** alfanumérico + guiones/guiones bajos (`^[a-zA-Z0-9\-_]+$`), entre 1 y 50 caracteres, único en todo el sistema
 - **Factor de código:** mayor a cero. Los enums `TipoCodigo` y `UnidadMedida` se reciben como string en el body JSON (configurado vía `JsonStringEnumConverter` global en `AddControllers`)
 - **Advertencias con confirmación (patrón FA3/FA4):** los commands `AltaProducto` y `EditarProducto` aceptan flags `confirmarPrecioVentaMenorCosto: bool` y `confirmarNombreSimilar: bool`. Si la condición se activa y el flag es false, se lanza la excepción correspondiente. El cliente reenvía con el flag en true para confirmar
+- **Comprobante co-dependiente:** `NumeroComprobante` y `TipoComprobante` son ambos obligatorios o ambos ausentes. Si uno se provee, el otro es requerido — validado en `RegistrarCompraCommandValidator`
 
 ### Controllers
 - Heredan de `ControllerBase`
@@ -293,7 +338,7 @@ git rm --cached src/smartStock.Api/appsettings.Development.json
 - Motor: **SQL Server**
 - Connection string en `appsettings.json` → clave `DefaultConnection`
 - `AppDbContext` extiende `DbContext` (NO IdentityDbContext — la gestión de usuarios y roles es completamente custom)
-- DbSets activos: `Usuarios`, `UsuarioRoles`, `Categorias`, `Productos`, `CodigosProducto`, `StocksActuales`, `MovimientosStock`, `Proveedores`, `TokensRevocados`
+- DbSets activos: `Usuarios`, `UsuarioRoles`, `Categorias`, `Productos`, `CodigosProducto`, `StocksActuales`, `MovimientosStock`, `Proveedores`, `TokensRevocados`, `ComprasDia`, `DetallesCompra`, `ItemsDetalleCompra`, `VentasDia`, `DetallesVenta`, `ItemsDetalleVenta`, `CierresCaja`
 - Configuraciones EF aplicadas con `builder.ApplyConfigurationsFromAssembly(...)`
 
 ---
@@ -339,6 +384,13 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 | `CodigoNoEncontradoException` | 404 | No se encontró el código solicitado para ese producto |
 | `NombreSimilarProductoException` | 409 | Nombre coincide case-insensitive con producto activo y `confirmarNombreSimilar = false` |
 | `PrecioVentaMenorCostoException` | 422 | Precio de venta menor al costo y `confirmarPrecioVentaMenorCosto = false` |
+| `SesionDiariaCerradaException` | 409 | Se intenta registrar o anular una compra en una sesión ya cerrada |
+| `CompraNoEncontradaException` | 404 | No se encontró la compra solicitada |
+| `CompraYaAnuladaException` | 409 | Se intenta anular una compra que ya fue anulada |
+| `StockInsuficienteParaAnulacionException` | 409 | El stock actual es menor al que se necesita revertir al anular la compra |
+| `StockInsuficienteParaDecremento` | 409 | La cantidad del ajuste manual Decremento supera el stock disponible |
+| `FechaCompraRetroactivaException` | 409 | La fecha de compra es anterior a hoy y `ConfirmarFechaRetroactiva = false` |
+| `ComprobanteDuplicadoException` | 409 | Ya existe una compra vigente del mismo proveedor con ese número y tipo de comprobante |
 
 ---
 
@@ -346,10 +398,10 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 
 ### Implementado ✅
 - Dominio completo (todos los modelos definidos; `Direccion` como Owned Entity compartida por Usuario y Proveedor)
-- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`, `ProductoConfiguration`, `CodigoProductoConfiguration`, `MovimientoStockConfiguration`, `CierreCajaConfiguration`, `CompraDiaConfiguration`, `VentaDiaConfiguration`, `ItemDetalleCompraConfiguration`, `ItemDetalleVentaConfiguration`, `ProveedorConfiguration`
-- Migraciones aplicadas: `InitialCreate`, `DireccionComoOwned`, `UniqueAdminRole`, `BorradoLogicoEmpleado`, `CU03_GestionCategorias`, `CU04_GestionProductos` (agrega tabla `CodigosProducto`, índice único `UX_CodigosProducto_Codigo`, campos nuevos en `Productos`: UnidadMedida, StockMinimo, EstaActivo, FechaAlta; agrega DbSets para StockActual y MovimientoStock; TipoMovimiento agrega AltaInicial)
+- EF configurado: `CategoriaConfiguration`, `UsuarioConfiguration`, `StockActualConfiguration`, `UsuarioRolConfiguration`, `ProductoConfiguration`, `CodigoProductoConfiguration`, `MovimientoStockConfiguration`, `CierreCajaConfiguration`, `CompraDiaConfiguration`, `VentaDiaConfiguration`, `DetalleCompraConfiguration`, `ItemDetalleCompraConfiguration`, `ItemDetalleVentaConfiguration`, `ProveedorConfiguration`
+- Migraciones aplicadas: `InitialCreate`, `DireccionComoOwned`, `UniqueAdminRole`, `BorradoLogicoEmpleado`, `CU03_GestionCategorias`, `CU04_GestionProductos`, `CU05_GestionCompras` (drop ProveedorId de CompraDia, nuevos campos en DetalleCompra/ItemDetalleCompra/MovimientoStock, cambio Tipo/Estado de int a nvarchar(20), índice único filtrado UX_DetallesCompra_Comprobante)
 - `IJwtTokenService` + `JwtTokenService`, `IPasswordHasher` + `BcryptPasswordHasher`
-- **Repositorios:** `IUsuarioRepository` / `UsuarioRepository`, `ITokenRevocadoRepository` / `TokenRevocadoRepository`, `IProveedorRepository` / `ProveedorRepository`, `ICategoriaRepository` / `CategoriaRepository`, `IProductoRepository` / `ProductoRepository`
+- **Repositorios:** `IUsuarioRepository` / `UsuarioRepository`, `ITokenRevocadoRepository` / `TokenRevocadoRepository`, `IProveedorRepository` / `ProveedorRepository`, `ICategoriaRepository` / `CategoriaRepository`, `IProductoRepository` / `ProductoRepository`, `ICompraRepository` / `CompraRepository`
 - **CU01-W1:** `RegistrarAdministrador` → `POST api/administrador/registrar-administrador`
 - **CU01-W2:** `IniciarSesion` → `POST api/auth/iniciar-sesion` (retorna JWT con claims: sub, email, nombre, roles)
 - **CU01-W3:** `AltaEmpleado` → `POST api/administrador/alta-empleado`
@@ -378,12 +430,20 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - **CU04-W4 (eliminar):** `EliminarCodigoProducto` → `DELETE api/administrador/eliminar-codigo-producto/{id:guid}/{codigoId:guid}` (204 No Content)
 - **CU04-R1:** `ObtenerListaProductos` → `GET api/administrador/obtener-lista-productos?filtroEstado=&filtroCategoria=&alertaStockBajo=&busqueda=`
 - **CU04-R2:** `ObtenerDetalleProducto` → `GET api/administrador/obtener-detalle-producto/{id:guid}`
+- **CU05-W1:** `RegistrarCompra` → `POST api/compras/registrar-compra`
+- **CU05-W2:** `AnularCompra` → `PATCH api/compras/anular-compra/{id:int}` (solo Administrador)
+- **CU05-W3:** `AjusteManualStock` → `POST api/compras/ajuste-manual-stock` (solo Administrador)
+- **CU05-R1:** `ObtenerListaCompras` → `GET api/compras/obtener-lista-compras`
+- **CU05-R2:** `ObtenerDetalleCompra` → `GET api/compras/obtener-detalle-compra/{id:int}`
+- **CU05-R3:** `ObtenerSesionDiariaCompras` → `GET api/compras/obtener-sesion-diaria-compras?fecha=`
+- **CU05-R4:** `ObtenerAjustesStock` → `GET api/compras/obtener-ajustes-stock` (solo Administrador)
 - Roles: `"Administrador"`, `"Empleado"`
-- **Seguridad:** rate limiting con políticas `"login"` (5 req/min) y `"admin-escritura"` (30 req/min), `VerificarUsuarioActivoMiddleware`, validación JWT key al arrancar, DNS timeout 3s centralizado, índice único filtrado Administrador, índice único filtrado CUIT Proveedor, índice único `UX_CodigosProducto_Codigo`
+- **Seguridad:** rate limiting con políticas `"login"` (5 req/min) y `"admin-escritura"` (30 req/min), `VerificarUsuarioActivoMiddleware`, validación JWT key al arrancar, DNS timeout 3s centralizado, índice único filtrado Administrador, índice único filtrado CUIT Proveedor, índice único `UX_CodigosProducto_Codigo`, índice único filtrado `UX_DetallesCompra_Comprobante`
 - **JSON:** `JsonStringEnumConverter` configurado globalmente en `AddControllers` — los enums se reciben y serializan como strings en todas las respuestas y bodies
 
 ### Pendiente ⏳
-- Features de VentaDia/CompraDia, DetalleVenta/DetalleCompra, MovimientoStock, CierreCaja
+- CU05: migración `CU05_GestionCompras` generada pero pendiente de `dotnet ef database update` (requiere SQL Server activo)
+- Features de VentaDia/DetalleVenta/ItemDetalleVenta, CierreCaja
 
 ---
 
@@ -406,6 +466,11 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - No leer `CodigoProducto.Codigo` o `Tipo` como editables en `EditarCodigoProducto` → solo `Factor` y `Descripcion` son modificables; para cambiar código o tipo, eliminar y agregar uno nuevo
 - No usar enums como enteros en el body JSON → `JsonStringEnumConverter` global, siempre strings (`"Barras"`, `"Interno"`, `"Unidad"`, etc.)
 - No reutilizar `CodigoProductoResponse` definido en otro namespace — el sub-DTO compartido está en `smartStock.Shared.Dtos.Admin.Productos`
+- No tratar `CompraDia` como sesión por proveedor → es una sesión diaria global (una por fecha). El `ProveedorId` está en `DetalleCompra`, no en `CompraDia`
+- No validar stock de anulación ítem por ítem de forma independiente → agregar las cantidades por producto antes de validar (`GroupBy(i => i.ProductoId).Sum(...)`) para evitar que la validación pase si el mismo producto aparece en varios ítems de la misma compra
+- No ajustar stock de productos inactivos → `AjusteManualStock` valida `!producto.EstaActivo` y lanza `ProductoNoEncontradoException`
+- No enviar `NumeroComprobante` sin `TipoComprobante` (ni viceversa) → son co-dependientes, validado en `RegistrarCompraCommandValidator`
+- No asumir que `ItemDetalleCompra` tiene un solo movimiento → tiene `ICollection<MovimientoStock>` (uno por Compra + uno por Anulacion si fue anulada)
 
 ---
 
@@ -424,6 +489,7 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - Política `"admin-escritura"`: ventana fija de 1 minuto, máximo 30 requests por IP. Aplicado en **todos** los endpoints de escritura:
   - Administrador: alta/editar/cambiar-estado/eliminar de empleados, proveedores, categorías y productos; agregar/editar/eliminar códigos de producto
   - Empleado: editar-perfil-empleado, cambiar-contrasena
+  - Compras: registrar-compra, anular-compra, ajuste-manual-stock
 - Retorna `429 Too Many Requests` al superarse
 - Registrado en `Program.cs` con `AddRateLimiter` + `AddPolicy`
 
@@ -441,3 +507,7 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 ### Índice único de CUIT en Proveedor
 - `ProveedorConfiguration` tiene un índice único filtrado donde CUIT no es null (`UX_Proveedores_Cuit`)
 - Permite múltiples proveedores sin CUIT, pero garantiza unicidad cuando se ingresa uno
+
+### Índice único de comprobante en DetalleCompra
+- `DetalleCompraConfiguration` tiene un índice único filtrado `UX_DetallesCompra_Comprobante` sobre (ProveedorId, NumeroComprobante, TipoComprobante) donde `[NumeroComprobante] IS NOT NULL AND [EstaAnulada] = 0`
+- Garantiza a nivel de base de datos que no existan dos compras vigentes del mismo proveedor con el mismo comprobante. Las compras anuladas quedan excluidas del índice

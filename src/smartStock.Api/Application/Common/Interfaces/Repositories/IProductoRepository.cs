@@ -15,4 +15,7 @@ public interface IProductoRepository
     Task                  AgregarCodigoAsync          (CodigoProducto codigo,                    CancellationToken ct = default);
     Task                  ActualizarCodigoAsync       (CodigoProducto codigo,                    CancellationToken ct = default);
     Task                  EliminarCodigoAsync         (CodigoProducto codigo,                    CancellationToken ct = default);
+
+    /// <summary>Agrega el movimiento al contexto y guarda todos los cambios tracked (incluyendo StockActual).</summary>
+    Task                  AjustarStockAsync           (MovimientoStock movimiento,               CancellationToken ct = default);
 }

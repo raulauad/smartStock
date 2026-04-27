@@ -36,6 +36,7 @@ builder.Services.AddScoped<ITokenRevocadoRepository, TokenRevocadoRepository>();
 builder.Services.AddScoped<IProveedorRepository,     ProveedorRepository>();
 builder.Services.AddScoped<ICategoriaRepository,     CategoriaRepository>();
 builder.Services.AddScoped<IProductoRepository,      ProductoRepository>();
+builder.Services.AddScoped<ICompraRepository,        CompraRepository>();
 
 // --- JWT ---
 builder.Services.AddAuthentication(options =>

@@ -4,10 +4,11 @@ namespace smartStock.Api.Domain.Models;
 
 public class MovimientoStock
 {
-    public int            Id        { get; set; }
-    public TipoMovimiento Tipo      { get; set; }
-    public decimal        Cantidad  { get; set; }
-    public DateTime       FechaHora { get; set; } = DateTime.UtcNow;
+    public int            Id          { get; set; }
+    public TipoMovimiento Tipo        { get; set; }
+    public decimal        Cantidad    { get; set; }
+    public DateTime       FechaHora   { get; set; } = DateTime.UtcNow;
+    public string?        Observacion { get; set; }
 
     public Guid     ProductoId { get; set; }
     public Producto Producto   { get; set; } = null!;
