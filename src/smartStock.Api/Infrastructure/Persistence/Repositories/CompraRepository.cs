@@ -23,14 +23,31 @@ public sealed class CompraRepository : ICompraRepository
             d.TipoComprobante == tipo &&
             (excluirCompraId == null || d.Id != excluirCompraId), ct);
 
-    public async Task<int> RegistrarCompraAsync(CompraDia sesion, bool esNuevaSesion, DetalleCompra compra, CancellationToken ct = default)
+    public async Task<int> RegistrarCompraAsync(CompraDia sesion, bool esNuevaSesion, DetalleCompra compra, decimal totalCompra, CancellationToken ct = default)
     {
-        if (esNuevaSesion)
-            _db.ComprasDia.Add(sesion);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            if (esNuevaSesion)
+                _db.ComprasDia.Add(sesion);
+            else
+            {
+                // UPDATE atómico para evitar race condition entre compras concurrentes de la misma sesión
+                await _db.Database.ExecuteSqlAsync(
+                    $"UPDATE ComprasDia SET Total = Total + {totalCompra} WHERE Id = {sesion.Id}", ct);
+                _db.Entry(sesion).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+            }
 
-        _db.DetallesCompra.Add(compra);
-        await _db.SaveChangesAsync(ct);
-        return compra.Id;
+            _db.DetallesCompra.Add(compra);
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+            return compra.Id;
+        }
+        catch
+        {
+            await tx.RollbackAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     public Task<DetalleCompra?> ObtenerCompraPorIdConItemsAsync(int compraId, CancellationToken ct = default)

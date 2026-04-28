@@ -142,7 +142,11 @@ src/smartStock.Api/
     +-- Controllers/
         +-- Auth/        -> AuthController (api/auth)
         +-- Usuarios/
-        |   +-- Admin/    -> AdministradorController (api/administrador)
+        |   +-- Admin/    -> AdministradorController   (api/administrador) — registrar + perfil admin
+        |   |             -> EmpleadosAdminController  (api/administrador) — CU01 gestión empleados
+        |   |             -> ProveedoresAdminController(api/administrador) — CU02 gestión proveedores
+        |   |             -> CategoriasAdminController (api/administrador) — CU03 gestión categorías
+        |   |             -> ProductosAdminController  (api/administrador) — CU04 gestión productos
         |   +-- Empleado/ -> EmpleadoController (api/empleado)
         +-- Compras/      -> ComprasController (api/compras)
 ```
@@ -183,6 +187,22 @@ Todos en `Domain/Models/`. Las relaciones clave son:
 
 ## Estructura de Features (CQRS)
 Los features se organizan por **dominio de actor** en `src/smartStock.Api/Application/Features/{Actor}/{Commands|Queries}/{NombreFeature}/`.
+
+La carpeta `Features/` tiene la siguiente estructura raíz:
+```
+Features/
++-- Auth/            -> IniciarSesion, CerrarSesion
++-- Usuarios/
+|   +-- Admin/       -> features del Administrador (CU01 admin, CU02, CU03, CU04)
+|   +-- Empleados/   -> features del Empleado (CU01 empleado)
++-- Compras/         -> features de Compras (CU05)
+```
+
+**Namespaces de Features:**
+- Admin:    `smartStock.Api.Application.Features.Usuarios.Admin.{Commands|Queries}.{Feature}`
+- Empleados: `smartStock.Api.Application.Features.Usuarios.Empleados.{Commands|Queries}.{Feature}`
+- Auth:     `smartStock.Api.Application.Features.Auth.Commands.{Feature}`
+- Compras:  `smartStock.Api.Application.Features.Compras.{Commands|Queries}.{Feature}`
 
 Cada carpeta de feature contiene:
 - `{Nombre}Command.cs` / `{Nombre}Query.cs` (record)
@@ -267,7 +287,7 @@ Controller: `ComprasController` → `[Route("api/compras")]`, `[Authorize]` a ni
 **Diseño clave de CU05:**
 - `CompraDia` es una sesión diaria **global** (una por fecha, no por proveedor). `ProveedorId` vive en `DetalleCompra`.
 - `ItemDetalleCompra.Movimientos` es `ICollection<MovimientoStock>` (1:many) para soportar el movimiento original (Compra) y el compensatorio (Anulacion) en el mismo item.
-- La atomicidad se logra por el DbContext scoped compartido entre repositorios: handler modifica entidades tracked, llama a `RegistrarCompraAsync` o `GuardarCambiosAsync` que hace un único `SaveChangesAsync`.
+- `RegistrarCompraAsync` usa una transacción explícita (`BeginTransactionAsync`). Para sesiones **existentes** el `Total` de `CompraDia` se actualiza con `ExecuteSqlAsync("UPDATE ComprasDia SET Total = Total + {delta}")` y la entidad se detacha (`Entry.State = Detached`) para evitar que EF la sobreescriba con el valor en memoria — mismo patrón que `VentaRepository`. El handler solo asigna `sesion.Total += totalCompra` cuando `esNuevaSesion == true` (INSERT de una sesión nueva). El delta se pasa explícitamente como parámetro `totalCompra` a `RegistrarCompraAsync`.
 - El índice único filtrado `UX_DetallesCompra_Comprobante` sobre (ProveedorId, NumeroComprobante, TipoComprobante) excluye filas anuladas (`[EstaAnulada] = 0`).
 
 ---
@@ -471,6 +491,7 @@ El `GlobalExceptionHandler` (middleware) centraliza todas las respuestas de erro
 - No ajustar stock de productos inactivos → `AjusteManualStock` valida `!producto.EstaActivo` y lanza `ProductoNoEncontradoException`
 - No enviar `NumeroComprobante` sin `TipoComprobante` (ni viceversa) → son co-dependientes, validado en `RegistrarCompraCommandValidator`
 - No asumir que `ItemDetalleCompra` tiene un solo movimiento → tiene `ICollection<MovimientoStock>` (uno por Compra + uno por Anulacion si fue anulada)
+- No actualizar `CompraDia.Total` o `VentaDia.Total` como entidad tracked (`sesion.Total += delta`) para sesiones existentes → siempre usar `ExecuteSqlAsync("UPDATE ... SET Total = Total + {delta}")` dentro de la transacción y luego `_db.Entry(sesion).State = Detached` para evitar que EF sobreescriba con el valor en memoria. Solo asignar el total en memoria cuando `esNuevaSesion == true` (para el INSERT inicial)
 
 ---
 

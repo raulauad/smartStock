@@ -10,7 +10,24 @@ public sealed class VentaDiaConfiguration : IEntityTypeConfiguration<VentaDia>
     {
         builder.HasKey(v => v.Id);
 
+        builder.Property(v => v.FechaSesion)
+            .IsRequired();
+
         builder.Property(v => v.Total)
             .HasColumnType("decimal(12,2)");
+
+        builder.Property(v => v.Estado)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.HasIndex(v => v.FechaSesion)
+            .IsUnique()
+            .HasDatabaseName("UX_VentasDia_FechaSesion");
+
+        builder.HasOne(v => v.Usuario)
+            .WithMany(u => u.VentasDia)
+            .HasForeignKey(v => v.UsuarioId)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }

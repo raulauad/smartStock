@@ -1,10 +1,10 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using smartStock.Api.Application.Features.Empleados.Commands.CambiarContrasena;
-using smartStock.Api.Application.Features.Empleados.Commands.EditarPerfilEmpleado;
+using smartStock.Api.Application.Features.Usuarios.Empleados.Commands.CambiarContrasena;
+using smartStock.Api.Application.Features.Usuarios.Empleados.Commands.EditarPerfilEmpleado;
 
 namespace smartStock.Api.Presentation.Controllers.Usuarios.Empleado;
 

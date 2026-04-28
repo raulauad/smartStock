@@ -235,8 +235,35 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("EstaAnulada")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("FechaHora")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("FormaPago")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("MontoRecibido")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<string>("MotivoAnulacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("NumeroComprobante")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<Guid?>("UsuarioAnulaId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("UsuarioId")
                         .HasColumnType("uniqueidentifier");
@@ -245,6 +272,8 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UsuarioAnulaId");
 
                     b.HasIndex("UsuarioId");
 
@@ -309,11 +338,22 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Cantidad")
                         .HasColumnType("decimal(12,2)");
 
+                    b.Property<Guid?>("CodigoProductoId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("DetalleVentaId")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("Factor")
+                        .HasColumnType("decimal(12,4)");
+
                     b.Property<decimal>("GananciaTotal")
                         .HasColumnType("decimal(12,2)");
+
+                    b.Property<string>("NombreProducto")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("PrecioCosto")
                         .HasColumnType("decimal(12,2)");
@@ -328,6 +368,8 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("decimal(12,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CodigoProductoId");
 
                     b.HasIndex("DetalleVentaId");
 
@@ -375,9 +417,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ItemCompraId");
 
-                    b.HasIndex("ItemVentaId")
-                        .IsUnique()
-                        .HasFilter("[ItemVentaId] IS NOT NULL");
+                    b.HasIndex("ItemVentaId");
 
                     b.HasIndex("ProductoId");
 
@@ -621,8 +661,10 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("Estado")
-                        .HasColumnType("int");
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("FechaSesion")
                         .HasColumnType("datetime2");
@@ -634,6 +676,10 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FechaSesion")
+                        .IsUnique()
+                        .HasDatabaseName("UX_VentasDia_FechaSesion");
 
                     b.HasIndex("UsuarioId");
 
@@ -724,6 +770,11 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("smartStock.Api.Domain.Models.DetalleVenta", b =>
                 {
+                    b.HasOne("smartStock.Api.Domain.Models.Usuario", "UsuarioAnula")
+                        .WithMany()
+                        .HasForeignKey("UsuarioAnulaId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("smartStock.Api.Domain.Models.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
@@ -737,6 +788,8 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+
+                    b.Navigation("UsuarioAnula");
 
                     b.Navigation("VentaDia");
                 });
@@ -769,6 +822,11 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("smartStock.Api.Domain.Models.ItemDetalleVenta", b =>
                 {
+                    b.HasOne("smartStock.Api.Domain.Models.CodigoProducto", "CodigoProducto")
+                        .WithMany()
+                        .HasForeignKey("CodigoProductoId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("smartStock.Api.Domain.Models.DetalleVenta", "DetalleVenta")
                         .WithMany("Items")
                         .HasForeignKey("DetalleVentaId")
@@ -780,6 +838,8 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.Navigation("CodigoProducto");
 
                     b.Navigation("DetalleVenta");
 
@@ -794,8 +854,8 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("smartStock.Api.Domain.Models.ItemDetalleVenta", "ItemVenta")
-                        .WithOne("Movimiento")
-                        .HasForeignKey("smartStock.Api.Domain.Models.MovimientoStock", "ItemVentaId")
+                        .WithMany("Movimientos")
+                        .HasForeignKey("ItemVentaId")
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("smartStock.Api.Domain.Models.Producto", "Producto")
@@ -971,7 +1031,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
                     b.HasOne("smartStock.Api.Domain.Models.Usuario", "Usuario")
                         .WithMany("VentasDia")
                         .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Usuario");
@@ -1006,7 +1066,7 @@ namespace smartStock.Api.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("smartStock.Api.Domain.Models.ItemDetalleVenta", b =>
                 {
-                    b.Navigation("Movimiento");
+                    b.Navigation("Movimientos");
                 });
 
             modelBuilder.Entity("smartStock.Api.Domain.Models.Producto", b =>

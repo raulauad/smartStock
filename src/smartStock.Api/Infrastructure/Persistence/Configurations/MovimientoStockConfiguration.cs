@@ -27,13 +27,7 @@ public sealed class MovimientoStockConfiguration : IEntityTypeConfiguration<Movi
             .HasForeignKey(m => m.UsuarioId)
             .OnDelete(DeleteBehavior.NoAction);
 
-        // ItemVenta: relación 1:0..1 (un ítem de venta tiene a lo sumo un movimiento)
-        builder.HasOne(m => m.ItemVenta)
-            .WithOne(i => i.Movimiento)
-            .HasForeignKey<MovimientoStock>(m => m.ItemVentaId)
-            .OnDelete(DeleteBehavior.NoAction);
-
-        // ItemCompra: relación muchos-a-1 (un ítem puede tener movimiento original + compensatorio de anulación)
-        // Configurado en ItemDetalleCompraConfiguration con HasMany → WithOne
+        // ItemVenta: relación 1:many configurada en ItemDetalleVentaConfiguration con HasMany → WithOne
+        // ItemCompra: relación 1:many configurada en ItemDetalleCompraConfiguration con HasMany → WithOne
     }
 }

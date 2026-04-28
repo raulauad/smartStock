@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -8,7 +8,7 @@ using smartStock.Api.Application.Common.Behaviors;
 using smartStock.Api.Application.Common.Interfaces.Auth;
 using smartStock.Api.Application.Common.Interfaces.Repositories;
 using smartStock.Api.Application.Common.Middleware;
-using smartStock.Api.Application.Features.Admin.Commands.RegistrarAdmin;
+using smartStock.Api.Application.Features.Usuarios.Admin.Commands.RegistrarAdmin;
 using FluentValidation;
 using smartStock.Api.Infrastructure.Persistence;
 using smartStock.Api.Infrastructure.Persistence.Repositories;
@@ -37,6 +37,7 @@ builder.Services.AddScoped<IProveedorRepository,     ProveedorRepository>();
 builder.Services.AddScoped<ICategoriaRepository,     CategoriaRepository>();
 builder.Services.AddScoped<IProductoRepository,      ProductoRepository>();
 builder.Services.AddScoped<ICompraRepository,        CompraRepository>();
+builder.Services.AddScoped<IVentaRepository,         VentaRepository>();
 
 // --- JWT ---
 builder.Services.AddAuthentication(options =>

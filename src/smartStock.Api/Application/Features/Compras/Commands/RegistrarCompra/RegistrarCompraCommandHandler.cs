@@ -148,9 +148,10 @@ public sealed class RegistrarCompraCommandHandler
 
         // Vincular compra a la sesión
         compra.CompraDia = sesion;
-        sesion.Total    += totalCompra;
+        if (esNuevaSesion)
+            sesion.Total += totalCompra;
 
-        var compraId = await _compraRepo.RegistrarCompraAsync(sesion, esNuevaSesion, compra, ct);
+        var compraId = await _compraRepo.RegistrarCompraAsync(sesion, esNuevaSesion, compra, totalCompra, ct);
 
         return new RegistrarCompraResponse(
             compra.Id,

@@ -11,8 +11,8 @@ public interface ICompraRepository
     /// <summary>Verifica si existe una compra vigente (no anulada) con el mismo proveedor, número y tipo de comprobante.</summary>
     Task<bool> ComprobanteExisteAsync(Guid proveedorId, string numero, TipoComprobante tipo, int? excluirCompraId, CancellationToken ct = default);
 
-    /// <summary>Persiste la sesión diaria (nueva o existente con Total actualizado) y la compra con sus ítems y movimientos.</summary>
-    Task<int> RegistrarCompraAsync(CompraDia sesion, bool esNuevaSesion, DetalleCompra compra, CancellationToken ct = default);
+    /// <summary>Persiste la sesión diaria y la compra dentro de una transacción explícita. Para sesiones existentes actualiza Total con SQL atómico para evitar race conditions.</summary>
+    Task<int> RegistrarCompraAsync(CompraDia sesion, bool esNuevaSesion, DetalleCompra compra, decimal totalCompra, CancellationToken ct = default);
 
     /// <summary>Carga la compra con sus ítems, movimientos y la sesión diaria asociada.</summary>
     Task<DetalleCompra?> ObtenerCompraPorIdConItemsAsync(int compraId, CancellationToken ct = default);
